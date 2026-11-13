@@ -267,9 +267,13 @@ function Header() {
                 <div className="dropdown-menu-custom popover-menu-right">
                   <div className="d-flex justify-content-between align-items-center px-3 pb-2 border-bottom">
                     <span className="fw-bold small">Giỏ hàng của bạn (2)</span>
-                    <a href="#cart" className="text-primary small">
+                    <button
+                      type="button"
+                      className="text-primary small border-0 bg-transparent p-0"
+                      onClick={() => { setShowCartPreview(false); navigate('/cart'); }}
+                    >
                       Xem tất cả
-                    </a>
+                    </button>
                   </div>
                   <div className="p-2">
                     <div className="d-flex gap-2 align-items-center p-2 border-bottom small">
@@ -308,7 +312,11 @@ function Header() {
                     </div>
                   </div>
                   <div className="p-3 bg-light rounded-bottom text-center">
-                    <button className="btn btn-primary btn-sm w-100 rounded-pill fw-semibold">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm w-100 rounded-pill fw-semibold"
+                      onClick={() => { setShowCartPreview(false); navigate('/cart'); }}
+                    >
                       Tiến hành thanh toán
                     </button>
                   </div>
