@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 import type { CartTotals, Voucher } from '../types/cart';
-import { formatVnd } from '../services/cartService';
+import { formatVnd } from '../utils/cart.format';
 
 interface OrderSummaryProps {
   totals: CartTotals;

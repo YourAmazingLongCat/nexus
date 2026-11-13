@@ -9,7 +9,7 @@ import '../../../shared/styles/theme.css';
 import '../../../features/product/styles/product.css';
 import '../../../features/home/styles/home.css';
 import '../../../features/category/styles/category.css';
-import '../../../features/cart/styles/cart.css';
+import '../../../features/commerce/cart/styles/cart.css';
 function BuyerLayout() {
   return (
     <div className="nx-buyer-layout">

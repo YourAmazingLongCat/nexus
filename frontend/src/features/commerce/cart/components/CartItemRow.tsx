@@ -1,5 +1,5 @@
 import type { CartItem } from '../types/cart';
-import { formatVnd } from '../services/cartService';
+import { formatVnd } from '../utils/cart.format';
 import QuantityStepper from './QuantityStepper';
 
 interface CartItemRowProps {

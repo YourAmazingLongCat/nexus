@@ -1,5 +1,5 @@
 import type { ShippingMethod, ShippingMethodId } from '../types/cart';
-import { formatVnd } from '../services/cartService';
+import { formatVnd } from '../utils/cart.format';
 
 interface ShippingOptionsProps {
   methods: ShippingMethod[];

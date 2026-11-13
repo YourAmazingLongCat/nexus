@@ -1,128 +1,24 @@
-import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { notify } from '../../../shared/components/Toast';
-import AuctionWinBanner from '../components/AuctionWinBanner';
-import CartEmptyState from '../components/CartEmptyState';
-import CartItemRow from '../components/CartItemRow';
-import CartStepper from '../components/CartStepper';
-import OrderSummary from '../components/OrderSummary';
-import PaymentMethods from '../components/PaymentMethods';
-import ShippingAddressCard from '../components/ShippingAddressCard';
-import ShippingOptions from '../components/ShippingOptions';
-import {
-  calculateTotals,
-  cartSessionCode,
-  defaultVoucherCode,
-  deliveryAddress,
-  findVoucher,
-  formatVnd,
-  initialCartItems,
-  paymentMethods,
-  shippingMethods,
-} from '../services/cartService';
-import type {
-  CartItem,
-  PaymentMethodId,
-  ShippingMethodId,
-  Voucher,
-} from '../types/cart';
+import AuctionWinBanner from '../../../features/commerce/cart/components/AuctionWinBanner';
+import CartEmptyState from '../../../features/commerce/cart/components/CartEmptyState';
+import CartItemRow from '../../../features/commerce/cart/components/CartItemRow';
+import CartStepper from '../../../features/commerce/cart/components/CartStepper';
+import OrderSummary from '../../../features/commerce/cart/components/OrderSummary';
+import PaymentMethods from '../../../features/commerce/cart/components/PaymentMethods';
+import ShippingAddressCard from '../../../features/commerce/cart/components/ShippingAddressCard';
+import ShippingOptions from '../../../features/commerce/cart/components/ShippingOptions';
+import { useCart } from '../../../features/commerce/cart/hooks/useCart';
+import { cartSessionCode, deliveryAddress, paymentMethods, shippingMethods } from '../../../features/commerce/cart/mocks/cart.mock';
 
-/**
- * Cart + checkout in a single screen (FR-15 → FR-21).
- * UI-only phase: no cart/checkout API is called, all data comes from
- * cartService fixtures and every total is computed on the client.
- */
+/** Buyer cart page: presentation only; state and actions live in useCart. */
 export default function CartPage() {
-  const [items, setItems] = useState<CartItem[]>(initialCartItems);
-  const [shippingId, setShippingId] = useState<ShippingMethodId>('standard');
-  const [paymentId, setPaymentId] = useState<PaymentMethodId>('vnpay');
-  const [voucherInput, setVoucherInput] = useState(defaultVoucherCode);
-  const [voucher, setVoucher] = useState<Voucher | null>(
-    findVoucher(defaultVoucherCode) ?? null,
-  );
-
-  const shippingMethod =
-    shippingMethods.find((method) => method.id === shippingId) ??
-    shippingMethods[0];
-
-  const hasAuctionItems = items.some((item) => item.mode === 'auction');
-
-  const totals = useMemo(
-    () => calculateTotals(items, { shippingFee: shippingMethod.fee, voucher }),
-    [items, shippingMethod.fee, voucher],
-  );
-
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const handleQuantityChange = (id: string, quantity: number) => {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.min(Math.max(1, quantity), item.maxQuantity) }
-          : item,
-      ),
-    );
-  };
-
-  const handleRemove = (id: string) => {
-    setItems((current) => current.filter((item) => item.id !== id));
-    notify.success('Đã xóa sản phẩm khỏi giỏ hàng.');
-  };
-
-  const handleSaveForLater = (id: string) => {
-    setItems((current) => current.filter((item) => item.id !== id));
-    notify.info('Đã chuyển sản phẩm vào danh sách "Lưu lại sau".');
-  };
-
-  const handleApplyVoucher = () => {
-    const code = voucherInput.trim().toUpperCase();
-
-    if (!code) {
-      notify.warning('Vui lòng nhập mã giảm giá.');
-      return;
-    }
-
-    const found = findVoucher(code);
-    if (!found) {
-      notify.error('Mã giảm giá không tồn tại hoặc đã hết hạn.');
-      return;
-    }
-
-    if (totals.directSubtotal <= 0) {
-      notify.warning(
-        'Mã này chỉ áp dụng cho sản phẩm Mua trực tiếp, không áp dụng cho hàng đấu giá.',
-      );
-      return;
-    }
-
-    setVoucher(found);
-    notify.success(`Đã áp dụng mã ${found.code}, giảm ${formatVnd(found.discount)}.`);
-  };
-
-  const handleClearVoucher = () => {
-    setVoucher(null);
-    setVoucherInput('');
-    notify.info('Đã bỏ mã giảm giá.');
-  };
-
-  const handleChangeAddress = () => {
-    notify.info('Chức năng quản lý địa chỉ sẽ có ở bước tích hợp API.');
-  };
-
-  const handleSupport = () => {
-    notify.info('Kênh chat trực tuyến sẽ được kết nối ở bước tích hợp.');
-  };
-
-  // Mock confirmation only: no payment gateway / order API is wired up yet.
-  const handleCheckout = () => {
-    notify.info(
-      `Đơn hàng ${formatVnd(totals.total)} chưa được gửi: hệ thống thanh toán chưa được kết nối.`,
-    );
-  };
-
-  const shippingLabel = shippingMethod.freeLabel
-    ? `Miễn phí (${formatVnd(0)})`
-    : formatVnd(shippingMethod.fee);
+  const {
+    items, shippingId, setShippingId, paymentId, setPaymentId,
+    voucherInput, setVoucherInput, voucher, hasAuctionItems, totals, itemCount,
+    shippingLabel, handleQuantityChange, handleRemove, handleSaveForLater,
+    handleApplyVoucher, handleClearVoucher, handleChangeAddress, handleSupport,
+    handleCheckout,
+  } = useCart();
 
   return (
     <main className="nx-cart-page">

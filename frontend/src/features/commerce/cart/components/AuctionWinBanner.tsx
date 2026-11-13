@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { auctionDeadlineSeconds, formatCountdown } from '../services/cartService';
+import { auctionDeadlineSeconds } from '../mocks/cart.mock';
+import { formatCountdown } from '../utils/cart.format';
 
 /**
  * Auction-win notice. The countdown is client-side only; the real deadline

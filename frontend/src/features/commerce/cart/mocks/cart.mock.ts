@@ -1,13 +1,12 @@
 import type {
   CartItem,
-  CartTotals,
   DeliveryAddress,
   PaymentMethod,
   ShippingMethod,
   Voucher,
 } from '../types/cart';
-import kashtiraFenrir from '../../../assets/images/cards/kashtira-fenrir.webp';
-import redEyesDarkDragoon from '../../../assets/images/cards/Red-Eyes Dark Dragoon.webp';
+import kashtiraFenrir from '../../../../assets/images/cards/kashtira-fenrir.webp';
+import redEyesDarkDragoon from '../../../../assets/images/cards/Red-Eyes Dark Dragoon.webp';
 
 // TODO(cart): UI-only fixtures. Replace with the cart/checkout API once backend
 // integration is explicitly requested. Prices are demo values, not real listings.
@@ -122,63 +121,3 @@ export const vouchers: Voucher[] = [
 
 export const defaultVoucherCode = 'NEXUSWELCOME';
 
-export function formatVnd(amount: number): string {
-  return `${amount.toLocaleString('vi-VN')} đ`;
-}
-
-export function findVoucher(code: string): Voucher | undefined {
-  const normalized = code.trim().toUpperCase();
-  return vouchers.find((voucher) => voucher.code === normalized);
-}
-
-export function formatCountdown(totalSeconds: number): string {
-  const safe = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(safe / 3600);
-  const minutes = Math.floor((safe % 3600) / 60);
-  const seconds = safe % 60;
-  return [hours, minutes, seconds]
-    .map((part) => String(part).padStart(2, '0'))
-    .join(':');
-}
-
-export interface CalculateTotalsInput {
-  shippingFee: number;
-  voucher?: Voucher | null;
-}
-
-/**
- * Cart totals (FR-17). Vouchers only discount direct-purchase items and are
- * capped by that subtotal, so a voucher can never create a negative line.
- */
-export function calculateTotals(
-  items: CartItem[],
-  { shippingFee, voucher }: CalculateTotalsInput,
-): CartTotals {
-  const directItems = items.filter((item) => item.mode === 'direct');
-  const auctionItems = items.filter((item) => item.mode === 'auction');
-  const directSubtotal = directItems.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
-  const auctionSubtotal = auctionItems.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
-  const directCount = directItems.reduce((sum, item) => sum + item.quantity, 0);
-  const auctionCount = auctionItems.reduce(
-    (sum, item) => sum + item.quantity,
-    0,
-  );
-  const discount = voucher ? Math.min(voucher.discount, directSubtotal) : 0;
-  const shipping = items.length > 0 ? shippingFee : 0;
-
-  return {
-    directSubtotal,
-    directCount,
-    auctionSubtotal,
-    auctionCount,
-    shippingFee: shipping,
-    discount,
-    total: directSubtotal + auctionSubtotal + shipping - discount,
-  };
-}
