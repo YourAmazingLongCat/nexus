@@ -189,9 +189,9 @@ function Header() {
               Yêu thích
             </a>
 
-            <a href={session ? '/' : '/login'} className="top-link">
+            <Link to={session ? '/buyer-hub' : '/login'} className="top-link">
               Tài khoản của tôi
-            </a>
+            </Link>
 
             {/* Notification Bell with Badge */}
             <div className="position-relative" ref={notifMenuRef}>
@@ -329,7 +329,7 @@ function Header() {
               type="button"
               className="avatar-circle-btn"
               title={session?.fullName ?? 'Đăng nhập'}
-              onClick={() => navigate(session ? '/' : '/login')}
+              onClick={() => navigate(session ? '/buyer-hub' : '/login')}
               aria-label="Tài khoản cá nhân"
             >
               <i className="bi bi-person-fill"></i>

@@ -5,6 +5,7 @@ import CategoryPage from '../../features/category/pages/CategoryPage';
 import ProductPage from '../../features/product/pages/ProductPage';
 import ProductDetailPage from '../../features/product/pages/ProductDetailPage';
 import CartPage from './pages/CartPage';
+import BuyerHubPage from './pages/BuyerHubPage';
 
 const buyerRoutes: RouteObject[] = [
   {
@@ -16,6 +17,7 @@ const buyerRoutes: RouteObject[] = [
       { path: 'products', element: <ProductPage /> },
       { path: 'products/:productId', element: <ProductDetailPage /> },
       { path: 'cart', element: <CartPage /> },
+      { path: 'buyer-hub', element: <BuyerHubPage /> },
 
     ],
   },

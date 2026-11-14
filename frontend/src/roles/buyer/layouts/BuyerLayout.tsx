@@ -10,6 +10,7 @@ import '../../../features/product/styles/product.css';
 import '../../../features/home/styles/home.css';
 import '../../../features/category/styles/category.css';
 import '../../../features/commerce/cart/styles/cart.css';
+import '../../../features/buyer-hub/styles/buyer-hub.css';
 function BuyerLayout() {
   return (
     <div className="nx-buyer-layout">
