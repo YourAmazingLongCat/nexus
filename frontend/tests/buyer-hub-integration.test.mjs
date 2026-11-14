@@ -28,5 +28,33 @@ test('buyer hub route uses buyer layout and renders source mock dashboard', asyn
     const helpers = await server.ssrLoadModule('/src/features/buyer-hub/utils/buyerHub.format.ts');
     assert.equal(helpers.formatWinCountdown(3661), 'Còn 01:01:01');
     assert.equal(helpers.parseCurrencyInput('1.200.000 đ'), 1200000);
+
+    const { default: SavedCartCheckoutTab } = await server.ssrLoadModule('/src/features/buyer-hub/components/SavedCartTab.tsx');
+    const saved = renderToStaticMarkup(createElement(SavedCartCheckoutTab, {
+      title: 'Giỏ & Đã lưu',
+      summary: 'Sản phẩm đã lưu',
+      selectAllLabel: 'Chọn tất cả',
+      items: [{
+        id: 'saved-macbook',
+        name: 'MacBook Pro',
+        seller: 'Apple',
+        condition: 'Mới 100%',
+        unitPrice: 34900000,
+        quantity: 1,
+        maxQuantity: 5,
+        icon: 'bi-laptop',
+        selected: true,
+      }],
+      selectedCount: 1,
+      subtotal: 34900000,
+      onToggle: () => {},
+      onSelectAll: () => {},
+      onQuantityChange: () => {},
+      onRemove: () => {},
+      onCheckout: () => {},
+    }));
+    assert.match(saved, /Đã chọn 1 mục/);
+    assert.match(saved, /34.900.000 đ/);
+    assert.match(saved, /Thanh toán đã chọn/);
   } finally { await server.close(); }
 });

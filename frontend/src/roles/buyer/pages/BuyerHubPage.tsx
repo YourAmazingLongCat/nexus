@@ -42,6 +42,8 @@ export default function BuyerHubPage() {
     visibleOrders,
     winRemaining,
     items,
+    selectedItemCount,
+    savedSubtotal,
     c2cDraft,
     handleOpenC2c,
     handleBidAction,
@@ -58,6 +60,7 @@ export default function BuyerHubPage() {
     handleSelectAllItems,
     handleQuantityChange,
     handleRemoveItem,
+    handleCheckoutSelected,
     handleC2cViewBidders,
     handleC2cEndEarly,
     handleC2cDraftChange,
@@ -129,10 +132,13 @@ export default function BuyerHubPage() {
                 summary={hubCopy.savedCartSummary}
                 selectAllLabel={hubCopy.savedCartSelectAll}
                 items={items}
+                selectedCount={selectedItemCount}
+                subtotal={savedSubtotal}
                 onToggle={handleToggleItem}
                 onSelectAll={handleSelectAllItems}
                 onQuantityChange={handleQuantityChange}
                 onRemove={handleRemoveItem}
+                onCheckout={handleCheckoutSelected}
               />
             )}
 

@@ -1,4 +1,5 @@
 import SavedItemRow from './SavedItemRow';
+import { formatVnd } from '../utils/buyerHub.format';
 import type { SavedItem } from '../types/buyerHub';
 
 interface SavedCartTabProps {
@@ -6,10 +7,13 @@ interface SavedCartTabProps {
   summary: string;
   selectAllLabel: string;
   items: SavedItem[];
+  selectedCount?: number;
+  subtotal?: number;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
   onQuantityChange: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  onCheckout?: () => void;
 }
 
 export default function SavedCartTab({
@@ -17,12 +21,16 @@ export default function SavedCartTab({
   summary,
   selectAllLabel,
   items,
+  selectedCount = 0,
+  subtotal = 0,
   onToggle,
   onSelectAll,
   onQuantityChange,
   onRemove,
+  onCheckout,
 }: SavedCartTabProps) {
   const allSelected = items.length > 0 && items.every((item) => item.selected);
+  const hasSelectedItems = selectedCount > 0;
 
   return (
     <section
@@ -62,6 +70,24 @@ export default function SavedCartTab({
           ))
         )}
       </div>
+
+      {items.length > 0 && (
+        <div className="nx-hub-saved-footer">
+          <div className="nx-hub-saved-checkout-meta" aria-live="polite">
+            <span>Đã chọn {selectedCount} mục</span>
+            <strong>{formatVnd(subtotal)}</strong>
+          </div>
+
+          <button
+            type="button"
+            className="nx-hub-saved-checkout"
+            onClick={onCheckout}
+            disabled={!hasSelectedItems || !onCheckout}
+          >
+            Thanh toán đã chọn
+          </button>
+        </div>
+      )}
     </section>
   );
 }

@@ -181,9 +181,9 @@ function Header() {
               )}
             </div>
 
-            <a href="#seller-hub" className="top-link top-link-hide-mobile">
+            <Link to="/seller-hub" className="top-link top-link-hide-mobile">
               Kênh Bán Hàng
-            </a>
+            </Link>
 
             <a href="#wishlist" className="top-link top-link-hide-mobile">
               Yêu thích
@@ -467,7 +467,7 @@ function Header() {
             type="button"
             className="btn-sell-auction"
             onClick={() =>
-              alert('Mở giao diện Đăng bán / Tạo phiên đấu giá mới!')
+              navigate('/seller-hub')
             }
           >
             <i className="bi bi-plus-circle"></i>
