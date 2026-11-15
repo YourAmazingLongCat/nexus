@@ -20,7 +20,12 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
     if (options.signal?.aborted) throw error;
     throw new ApiError(0, 'Không thể kết nối máy chủ. Vui lòng thử lại.');
   }
-  const text = response.status === 204 ? '' : await response.text();
+  let text: string;
+  try { text = response.status === 204 ? '' : await response.text(); }
+  catch (error) {
+    if (options.signal?.aborted) throw error;
+    throw new ApiError(0, 'Kết nối bị gián đoạn khi nhận phản hồi. Vui lòng thử lại.');
+  }
   let body: unknown = null;
   if (text) { try { body = JSON.parse(text); } catch { if (response.ok) throw new ApiError(response.status, 'Phản hồi máy chủ không hợp lệ.'); } }
   if (!response.ok) {
@@ -28,10 +33,19 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       clearSession();
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('nexus:session-changed'));
     }
-    const error = body as { message?: string; details?: unknown[]; code?: string; data?: unknown } | null;
-    throw new ApiError(response.status, error?.message || `Yêu cầu không thành công (${response.status}).`, Array.isArray(error?.details) ? error.details : [], typeof error?.code === 'string' ? error.code : undefined, error?.data);
+    const error = body && typeof body === 'object' ? body as { message?: unknown; details?: unknown[]; error?: unknown; code?: unknown; data?: unknown } : null;
+    throw new ApiError(response.status, typeof error?.message === 'string' && error.message ? error.message : `Yêu cầu không thành công (${response.status}).`, Array.isArray(error?.details) ? error.details : [], typeof error?.error === 'string' ? error.error : typeof error?.code === 'string' ? error.code : undefined, error?.data);
   }
   return body as T;
 }
 export interface PageResponse<T> { content: T[]; page: number; size: number; totalElements: number; totalPages: number; first: boolean; last: boolean }
-export function apiErrorMessage(error: unknown): string { return error instanceof Error ? error.message : 'Yêu cầu không thành công.'; }
+export function apiErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return 'Yêu cầu không thành công.';
+  if (!(error instanceof ApiError)) return error.message;
+  const fields = error.details.flatMap(detail => {
+    if (!detail || typeof detail !== 'object') return [];
+    const item = detail as { field?: unknown; message?: unknown };
+    return typeof item.message === 'string' ? [(typeof item.field === 'string' ? item.field + ': ' : '') + item.message] : [];
+  });
+  return fields.length ? error.message + ': ' + fields.join('; ') : error.message;
+}

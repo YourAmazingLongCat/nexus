@@ -14,7 +14,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (options.signal?.aborted) throw error;
     throw new AuthApiError(0, 'Không thể kết nối máy chủ. Vui lòng thử lại.');
   }
-  const body = response.status === 204 ? null : await response.json().catch(() => null);
+  let text: string;
+  try { text = response.status === 204 ? '' : await response.text(); }
+  catch (error) {
+    if (options.signal?.aborted) throw error;
+    throw new AuthApiError(0, 'Kết nối bị gián đoạn khi nhận phản hồi. Vui lòng thử lại.');
+  }
+  let body: any = null;
+  if (text) {
+    try { body = JSON.parse(text); }
+    catch { if (response.ok) throw new AuthApiError(0, 'Phản hồi máy chủ không hợp lệ.'); }
+  }
   if (!response.ok) {
     if (response.status === 401 && new Headers(options.headers).has('Authorization')) { clearSession(); sessionChanged(); }
     throw new AuthApiError(response.status, body?.message || 'Yêu cầu không thành công. Vui lòng thử lại.', Array.isArray(body?.details) ? body.details : []);

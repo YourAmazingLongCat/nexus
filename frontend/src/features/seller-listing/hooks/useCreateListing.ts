@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notify } from '../../../shared/components/Toast';
 import { sellerApi, flatCategories, messageOf } from '../../seller-hub/services/seller.api';
-import type { Category, Product } from '../../seller-hub/services/seller.api';
+import type { Category } from '../../seller-hub/services/seller.api';
+import { assertProductRetryMatches, productCreationFingerprint } from '../../seller-hub/hooks/productCreationRetry';
+import type { PendingProductCreation } from '../../seller-hub/hooks/productCreationRetry';
 import { initialListingDraft, listingAccessories } from '../mocks/createListing.mock';
 import type { ListingDraftForm, ListingMediaSlot } from '../types/createListing';
 const TITLE_MAX = 120;
@@ -15,7 +17,7 @@ export function useCreateListing() {
   const [condition,setCondition]=useState('like-new');const [saleModes,setSaleModes]=useState<string[]>(['fixed']);
   const [shippingPayer,setShippingPayer]=useState<'buyer'|'seller'>('buyer');const [accessories,setAccessories]=useState<string[]>(listingAccessories);
   const [media,setMedia]=useState<ListingMediaSlot[]>([]);const [saved,setSaved]=useState(false);const [errors,setErrors]=useState<string[]>([]);
-  const [submitting,setSubmitting]=useState(false);const pendingProduct=useRef<Product|null>(null);const mutationLock=useRef(false);
+  const [submitting,setSubmitting]=useState(false);const pendingProduct=useRef<PendingProductCreation|null>(null);const mutationLock=useRef(false);
   useEffect(()=>{const c=new AbortController();sellerApi.categories(c.signal).then(rows=>setCategories(flatCategories(rows).filter(c=>c.status==='ACTIVE'))).catch(e=>{if(!c.signal.aborted)notify.warning(messageOf(e));});return()=>c.abort();},[]);
   const urls = useRef(new Set<string>());
   useEffect(() => () => { urls.current.forEach(url => URL.revokeObjectURL(url)); }, []);
@@ -36,11 +38,13 @@ export function useCreateListing() {
     setErrors(next);if(next.length){notify.warning(next[0]);return;}
     mutationLock.current=true;setSubmitting(true);
     try{
-      const product=pendingProduct.current ?? await sellerApi.createProduct({name:draft.title.trim(),description:draft.description.trim(),basePrice:draft.dealPrice,categoryId:category,images:[]});
-      pendingProduct.current=product;
-      await sellerApi.createSku({productId:product.id,skuCode:draft.sku.trim(),name:draft.title.trim(),price:draft.dealPrice,initialTotalQuantity:draft.quantity,initialAvailableQuantity:draft.quantity});
+      const input={name:draft.title.trim(),description:draft.description.trim(),basePrice:draft.dealPrice,categoryId:category,images:[]};
+      assertProductRetryMatches(pendingProduct.current,input);
+      const id=pendingProduct.current?.id ?? (await sellerApi.createProduct(input)).id;
+      pendingProduct.current={id,fingerprint:productCreationFingerprint(input)};
+      await sellerApi.createSku({productId:id,skuCode:draft.sku.trim(),name:input.name,price:input.basePrice,initialTotalQuantity:draft.quantity,initialAvailableQuantity:draft.quantity});
       pendingProduct.current=null;notify.success('Đã lưu sản phẩm, SKU và tồn kho.');navigate('/seller/products',{state:{listingPublished:true}});
-    }catch(e){notify.warning(messageOf(e)+(pendingProduct.current?' Sản phẩm đã tạo; hãy sửa mã SKU và thử lại để hoàn tất tồn kho.':''));}finally{mutationLock.current=false;setSubmitting(false);}
+    }catch(e){notify.warning(messageOf(e)+(pendingProduct.current?' Sản phẩm đã tạo; giữ nguyên thông tin sản phẩm, chỉ sửa mã SKU hoặc số lượng rồi thử lại để hoàn tất tồn kho.':''));}finally{mutationLock.current=false;setSubmitting(false);}
   }
   const titleLength = draft.title.length;
   const discountPercent = draft.price > 0 ? Math.round(((draft.price - draft.dealPrice) / draft.price) * 100) : 0;

@@ -1,4 +1,4 @@
-﻿import { api, type PageResponse } from './client';
+﻿import { api, ApiError, type PageResponse } from './client';
 export interface HeaderCategory { id: string; name: string; children: HeaderCategory[] }
 export interface HeaderNotification { id: string; title: string; content?: string; read: boolean; createdAt: string }
 const flattenCategories = (categories: HeaderCategory[]): HeaderCategory[] => categories.flatMap(category => [category, ...flattenCategories(category.children ?? [])]);
@@ -8,8 +8,13 @@ export const headerApi = {
   cart: async (signal?: AbortSignal) => {
     const cart = await api<{ items: { id: string; productId: string; quantity: number; unitPrice: number; productName?: string }[] }>('/api/v1/buyer/commerce/cart', { signal });
     const products = new Map(await Promise.all([...new Set(cart.items.map(item => item.productId))].map(async id => {
-      const product = await api<{ id: string; name: string }>('/api/v1/catalog/products/' + encodeURIComponent(id), { signal });
-      return [id, product.name] as const;
+      try {
+        const product = await api<{ id: string; name: string }>('/api/v1/catalog/products/' + encodeURIComponent(id), { signal });
+        return [id, product.name] as const;
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        return [id, id] as const;
+      }
     })));
     return { ...cart, items: cart.items.map(item => ({ ...item, productName: products.get(item.productId) })) };
   },

@@ -1,9 +1,11 @@
+import { apiErrorMessage } from '../../../services/api/client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notify } from '../../../shared/components/Toast';
 import { commerceApi, type CommerceCart } from '../../../services/api/commerce';
 import { buyerApi } from '../../../services/api/buyer';
 import { calculateTotals } from '../services/cart.calculation';
+import { hasCartFinancialDrift, validateCheckoutAddress } from '../services/cart.contract';
 import { CartMutationQueue } from '../services/cartMutationQueue';
 import type { CartItem, DeliveryAddress, PaymentMethodId, ShippingMethodId, Voucher } from '../types/cart';
 
@@ -22,11 +24,12 @@ export function useCart() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const checkoutLock = useRef(false);
   const mutationLock = useRef(false);
+  const cartRevision = useRef(0);
   const [shippingId] = useState<ShippingMethodId>('standard');
   const [paymentId, setPaymentId] = useState<PaymentMethodId>('cod');
   const [voucherInput, setVoucherInput] = useState('');
   const [voucher, setVoucher] = useState<Voucher | null>(null);
-  const report = (error: unknown) => notify.error(error instanceof Error ? error.message : 'Không thể kết nối máy chủ.');
+  const report = (error: unknown) => notify.error(apiErrorMessage(error));
   const refresh = async (next?: CommerceCart) => {
     const data = next ?? await commerceApi.cart();
     const products = await Promise.all(data.items.map(line => buyerApi.product(line.productId).catch(() => null)));
@@ -53,9 +56,10 @@ export function useCart() {
         onItemState: (id, snapshot) => setItems(current => current.map(item => item.id !== id
           || (item.syncState === snapshot.syncState && item.stockState === snapshot.stockState && item.maxQuantity === (snapshot.maxQuantity ?? Number.MAX_SAFE_INTEGER))
           ? item : { ...item, syncState: snapshot.syncState, stockState: snapshot.stockState, maxQuantity: snapshot.maxQuantity ?? Number.MAX_SAFE_INTEGER })),
-        onConfirmed: setCart,
+        onConfirmed: data => { cartRevision.current++; setCart(data); setVoucher(null); },
         onReconciled: (id, quantity, info) => {
           setItems(current => quantity === 0 ? current.filter(item => item.id !== id) : current.map(item => item.id === id ? { ...item, quantity } : item));
+          cartRevision.current++;
           setVoucher(null);
           if (info.reason === 'missing') notify.warning('Sản phẩm không còn trong giỏ hàng.');
           else if (info.reason === 'conflict') notify.warning('Giỏ hàng đã thay đổi ở nơi khác. Số lượng đã được cập nhật theo dữ liệu máy chủ.');
@@ -94,10 +98,11 @@ export function useCart() {
   const handleRemove = useCallback((id: string) => {
     const queue = queueRef.current;
     if (!queue || checkoutLock.current) return;
+    cartRevision.current++;
     setItems(current => current.filter(item => item.id !== id));
     setVoucher(null);
     queue.remove(id)
-      .then(() => notify.success('Đã xóa sản phẩm khỏi giỏ hàng.'))
+      .then(async () => { notify.success('Đã xóa sản phẩm khỏi giỏ hàng.'); await refreshAfterMutation(); })
       .catch(async error => { report(error); await refreshAfterMutation(); });
   }, []);
   /** Optimistic: the UI changes immediately; the per-item queue syncs the latest value with the Backend. */
@@ -109,6 +114,7 @@ export function useCart() {
     const next = Math.min(Math.trunc(quantity), current.maxQuantity);
     if (next < Math.trunc(quantity)) notify.warning(`Chỉ còn ${current.maxQuantity} sản phẩm trong kho.`, { toastId: `stock-${id}` });
     if (next === current.quantity) return;
+    cartRevision.current++;
     setItems(list => list.map(item => item.id === id ? { ...item, quantity: next, syncState: 'pending' } : item));
     setVoucher(null);
     queue.setQuantity(id, next);
@@ -122,7 +128,7 @@ export function useCart() {
     if (!ok) { notify.warning('Một số thay đổi số lượng chưa được đồng bộ. Hãy thử lại từng sản phẩm hoặc tải lại giỏ hàng trước khi đặt hàng.'); return false; }
     try {
       const latest = await commerceApi.cart();
-      const drift = latest.items.length !== queue.size() || latest.items.some(line => queue.getSnapshot(line.id)?.confirmedQuantity !== line.quantity);
+      const drift = hasCartFinancialDrift(cart, latest) || latest.items.length !== queue.size() || latest.items.some(line => queue.getSnapshot(line.id)?.confirmedQuantity !== line.quantity);
       if (drift) {
         await refresh(latest);
         notify.warning('Giỏ hàng đã được cập nhật theo dữ liệu máy chủ. Vui lòng kiểm tra lại trước khi đặt hàng.');
@@ -136,11 +142,21 @@ export function useCart() {
   const totals = useMemo(() => calculateTotals(items, { shippingFee: 0, voucher }), [items, voucher]);
   const handleApplyVoucher = () => void mutate(async () => {
     if (!voucherInput.trim()) { notify.warning('Vui lòng nhập mã giảm giá.'); return; }
-    const result = await commerceApi.discount(voucherInput.trim(), Number(cart?.subtotal ?? 0));
+    const queue = queueRef.current;
+    if (!queue) return;
+    const { ok } = await queue.settle();
+    if (!ok) { notify.warning('Vui lòng đồng bộ giỏ hàng trước khi áp dụng mã giảm giá.'); return; }
+    const revision = cartRevision.current;
+    const latest = await commerceApi.cart();
+    if (revision !== cartRevision.current) return;
+    await refresh(latest);
+    if (revision !== cartRevision.current) return;
+    const result = await commerceApi.discount(voucherInput.trim(), Number(latest.subtotal));
+    if (revision !== cartRevision.current) return;
     setVoucher({ code: result.code, discount: Number(result.discountAmount), description: 'Được xác nhận bởi máy chủ', directOnly: true });
     notify.success('Đã áp dụng mã giảm giá.');
   });
-  const handleClearVoucher = () => { setVoucher(null); setVoucherInput(''); };
+  const handleClearVoucher = () => { cartRevision.current++; setVoucher(null); setVoucherInput(''); };
   const handleChangeAddress = () => {
     const receiverName = window.prompt('Tên người nhận', deliveryAddress.receiverName);
     if (receiverName === null) return;
@@ -155,7 +171,8 @@ export function useCart() {
     if (mutationLock.current || checkoutLock.current || preparingCheckout.current) return;
     if (!items.length) { notify.warning('Giỏ hàng đang trống.'); return; }
     if (paymentId !== 'cod') { notify.warning('Cổng VNPay, thẻ và MoMo chưa được backend hỗ trợ. Vui lòng chọn COD.'); return; }
-    if (!deliveryAddress.receiverName || !deliveryAddress.phone || !deliveryAddress.line) { notify.warning('Vui lòng nhập đầy đủ thông tin nhận hàng.'); return; }
+    const invalidAddress = validateCheckoutAddress({ receiverName: deliveryAddress.receiverName, receiverPhone: deliveryAddress.phone, shippingAddress: deliveryAddress.line });
+    if (invalidAddress) { notify.warning(invalidAddress); return; }
     preparingCheckout.current = true; setCheckoutPreparing(true);
     try { if (await syncBeforeCheckout()) setCheckoutOpen(true); }
     finally { preparingCheckout.current = false; setCheckoutPreparing(false); }

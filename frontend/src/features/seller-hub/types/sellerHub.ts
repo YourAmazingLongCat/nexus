@@ -1,6 +1,6 @@
 export type ProductStatus = 'ready' | 'low' | 'auction' | 'available';
 export interface SellerProduct {
-  productId?: string; description?: string; images?: string[];
+  productId?: string; description?: string; images?: string[]; primaryImageUrl?: string | null;
   id: string;
   name: string;
   sku: string;

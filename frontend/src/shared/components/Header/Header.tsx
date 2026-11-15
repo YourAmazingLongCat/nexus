@@ -60,7 +60,7 @@ function Header() {
     catch (error) { notify.error(apiErrorMessage(error)); }
   }
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tất cả danh mục');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -134,7 +134,7 @@ function Header() {
     e.preventDefault();
     const params = new URLSearchParams();
     if (searchQuery.trim()) params.set('q', searchQuery.trim());
-    const category = categories.find(item => item.name === selectedCategory);
+    const category = categories.find(item => item.id === selectedCategory);
     if (category) params.set('categoryId', category.id);
     navigate(`/products${params.size ? `?${params}` : ''}`);
   };
@@ -361,12 +361,12 @@ function Header() {
                 </div>
                 {categories.map((cat) => (
                   <a
-                    key={cat.name}
+                    key={cat.id}
                     href={`/categories/${cat.id}`}
                     className="category-dropdown-item"
                     onClick={(event) => { event.preventDefault(); setShowCategoryMenu(false); navigate(`/categories/${cat.id}`); }}
                   >
-                    <i className={`bi ${cat.icon || 'bi-grid'}`}></i>
+                    <i className="bi bi-grid"></i>
                     <span>{cat.name}</span>
                   </a>
                 ))}
@@ -409,7 +409,7 @@ function Header() {
                 className="category-select-btn"
                 onClick={() => setShowCategoryFilter(!showCategoryFilter)}
               >
-                <span>{selectedCategory}</span>
+                <span>{categories.find(item => item.id === selectedCategory)?.name ?? 'Tất cả danh mục'}</span>
                 <i className="bi bi-chevron-down small text-muted"></i>
               </button>
 
@@ -420,13 +420,13 @@ function Header() {
                 >
                   <div
                     className={`p-2 rounded small cursor-pointer ${
-                      selectedCategory === 'Tất cả danh mục'
+                      selectedCategory === ''
                         ? 'bg-primary text-white'
                         : 'hover-bg-light text-dark'
                     }`}
                     style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      setSelectedCategory('Tất cả danh mục');
+                      setSelectedCategory('');
                       setShowCategoryFilter(false);
                     }}
                   >
@@ -434,15 +434,15 @@ function Header() {
                   </div>
                   {categories.map((cat) => (
                     <div
-                      key={cat.name}
+                      key={cat.id}
                       className={`p-2 rounded small cursor-pointer ${
-                        selectedCategory === cat.name
+                        selectedCategory === cat.id
                           ? 'bg-primary text-white'
                           : 'hover-bg-light text-dark'
                       }`}
                       style={{ cursor: 'pointer' }}
                       onClick={() => {
-                        setSelectedCategory(cat.name);
+                        setSelectedCategory(cat.id);
                         setShowCategoryFilter(false);
                       }}
                     >

@@ -95,6 +95,8 @@ test('real API adapter: payloads, errors, persistence, expiry, abort and logout'
     assert.equal(api.getSession(), null);
     globalThis.fetch = async () => new Response('not json', { status: 502 });
     await assert.rejects(api.register(input), (e) => e.status === 502);
+    globalThis.fetch = async () => ({ status: 200, ok: true, text: async () => { throw new TypeError('stream closed'); } });
+    await assert.rejects(api.register(input), e => e instanceof api.AuthApiError && e.status === 0);
     globalThis.fetch = async () => Response.json({});
     await assert.rejects(api.register(input), (e) => e.status === 0);
     await assert.rejects(api.login({ identifier: 'testuser', password: input.password, role: 'buyer' }, true));

@@ -4,6 +4,7 @@ export function validateListing(draft: ListingDraftForm, category: string, saleM
   const next: string[] = [];
     if (!draft.title.trim() || draft.title.length > TITLE_MAX) next.push('Tên sản phẩm bắt buộc, tối đa 120 ký tự.');
     if (!draft.description.trim()) next.push('Vui lòng nhập mô tả sản phẩm.');
+    if (draft.description.trim().length > 5000) next.push('Mô tả HTML tối đa 5000 ký tự.');
     if (!category) next.push('Vui lòng chọn danh mục.');
     if (!Number.isFinite(draft.price) || draft.price <= 0) next.push('Giá niêm yết phải là số dương.');
     if (!Number.isInteger(draft.quantity) || draft.quantity <= 0 || draft.quantity > 99) next.push('Số lượng phải là số nguyên từ 1 đến 99.');

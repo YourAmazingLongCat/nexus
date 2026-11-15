@@ -13,7 +13,7 @@ import '../styles/sign-in-card.css';
 import '../styles/register-card.css';
 
 const fields = [
-  { name: 'username', label: 'Tên đăng nhập', autoComplete: 'username', placeholder: 'Tên đăng nhập từ 3 đến 100 ký tự' },
+  { name: 'username', label: 'Tên đăng nhập', autoComplete: 'username', placeholder: 'Tên đăng nhập từ 3 đến 50 ký tự' },
   { name: 'phone', label: 'Số điện thoại (không bắt buộc)', autoComplete: 'tel', placeholder: '+84901234567' },
   {
     name: 'fullName',
@@ -31,7 +31,7 @@ const fields = [
     name: 'password',
     label: 'Mật khẩu',
     autoComplete: 'new-password',
-    placeholder: 'Tạo mật khẩu từ 6 đến 128 ký tự',
+    placeholder: 'Tạo mật khẩu từ 8 đến 72 ký tự',
   },
   {
     name: 'confirmPassword',
@@ -167,8 +167,8 @@ function RegisterPage() {
                       placeholder={field.placeholder}
                       disabled={busy}
                       required={name !== 'phone'}
-                      minLength={isPassword ? 6 : name === 'username' ? 3 : undefined}
-                      maxLength={isPassword ? 128 : name === 'username' ? 100 : name === 'fullName' ? 150 : name === 'email' ? 255 : 16}
+                      minLength={isPassword ? 8 : name === 'username' ? 3 : undefined}
+                      maxLength={isPassword ? 72 : name === 'username' ? 50 : name === 'fullName' ? 150 : name === 'email' ? 255 : 20}
                       value={values[name]}
                       onChange={(event) => {
                         setPhase('idle');

@@ -1,9 +1,9 @@
-﻿import { api } from '../../../services/api/client';
+﻿import { api, ApiError, apiErrorMessage } from '../../../services/api/client';
 const rawGet = <T>(path: string, signal?: AbortSignal) => api<T>('/api/v1' + path, { method: 'GET', signal });
 const rawRequest = <T>(path: string, options: RequestInit) => api<T>('/api/v1' + path, options);
 export interface Page<T> { content: T[]; page: number; size: number; totalElements: number; totalPages: number; first: boolean; last: boolean }
 export interface Category { id: string; name: string; status: string; children: Category[] }
-export interface Product { id: string; sellerId: string; name: string; description: string | null; basePrice: number; categoryId: string; categoryName: string; status: string; images: string[] }
+export interface Product { id: string; sellerId: string; name: string; description: string | null; basePrice: number; categoryId: string; categoryName: string; status: string; images: string[]; primaryImageUrl?: string | null }
 export interface ProductInput { name: string; description: string; basePrice: number; images: { imageUrl: string; primary: boolean }[] }
 export interface Inventory { id: string; skuId: string; productId: string; skuCode: string; skuName: string | null; warehouseId: string; totalQuantity: number; availableQuantity: number; status: string }
 export interface Sku { id: string; productId: string; sellerId: string; skuCode: string; name: string | null; price: number | null }
@@ -30,7 +30,7 @@ export const sellerApi = {
     updateOrder: (id: string, status: string) => apiRequest<Order>(orderPath + '/' + encodeURIComponent(id) + '/status', json('PATCH', { status })),
     cancelOrder: (id: string) => apiRequest<Order>(orderPath + '/' + encodeURIComponent(id) + '/cancel', json('POST')),
 };
-export const messageOf = (error: unknown) => error instanceof Error ? error.message : 'Yêu cầu không thành công.';
+export const messageOf = apiErrorMessage;
 export function flatCategories(rows: Category[]): Category[] { return rows.flatMap(row => [row, ...flatCategories(row.children ?? [])]); }
 export const nextOrderStatus: Record<string, string> = { PENDING: 'CONFIRMED', CONFIRMED: 'SHIPPING', SHIPPING: 'COMPLETED' };
 export const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -43,7 +43,7 @@ function item(value: unknown, kind: string): boolean {
     if (!record(value)) return false;
     if (kind === 'inventory') return strings(value, ['id', 'skuId', 'productId', 'skuCode', 'warehouseId', 'status']) && (value.skuName == null || text(value.skuName)) && ['totalQuantity', 'availableQuantity'].every(k => Number.isInteger(value[k]) && Number(value[k]) >= 0);
     if (kind === 'sku') return strings(value, ['id', 'productId', 'sellerId', 'skuCode']) && (value.name == null || text(value.name)) && (value.price == null || money(value.price));
-    if (kind === 'product') return strings(value, ['id', 'sellerId', 'name', 'categoryId', 'status']) && (value.description == null || text(value.description)) && money(value.basePrice) && Array.isArray(value.images) && value.images.every(text);
+    if (kind === 'product') return strings(value, ['id', 'sellerId', 'name', 'status']) && (value.categoryId == null || text(value.categoryId)) && (value.primaryImageUrl == null || text(value.primaryImageUrl)) && (value.description == null || text(value.description)) && money(value.basePrice) && Array.isArray(value.images) && value.images.every(text);
     if (kind === 'order') return strings(value, ['id', 'orderNumber', 'status', 'createdAt']) && money(value.totalAmount) && (value.itemCount === undefined || (Number.isInteger(value.itemCount) && Number(value.itemCount) >= 0));
     return false;
 }
@@ -59,6 +59,9 @@ function validate<T>(path: string, value: unknown): T {
         if (valid && kind === 'order' && !paged) { valid = record(value) && Array.isArray(value.items) && value.items.every(v => record(v) && strings(v, ['id', 'productId', 'productNameSnapshot']) && Number.isInteger(v.quantity) && money(v.unitPrice) && money(v.subtotal)); }
     }
     if (!valid) throw new Error('Phản hồi API bán hàng không hợp lệ. Vui lòng tải lại.');
+    if (record(value) && !path.includes('?') && !path.includes('/inventories') && !path.includes('/skus') && !path.includes('/orders') && path !== '/catalog/categories') {
+      return { ...value, categoryId: value.categoryId ?? '', categoryName: value.categoryName ?? '' } as T;
+    }
     return value as T;
 }
 async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> { return validate<T>(path, await rawGet<unknown>(path, signal)); }
@@ -68,8 +71,15 @@ export async function loadSellerInventory(signal?: AbortSignal) {
  const inventories: Inventory[] = [];
  for(let page=0;;page++) { const result=await sellerApi.inventories(new URLSearchParams({page:String(page),size:'100'}),signal); inventories.push(...result.content); if(result.last || page+1>=result.totalPages) break; }
  const products=new Map<string,Product>();
- await Promise.all([...new Set(inventories.map(i=>i.productId))].map(async id=>{products.set(id,await sellerApi.product(id,signal));}));
- return {inventories,products};
+ await Promise.all([...new Set(inventories.map(i=>i.productId))].map(async id => {
+   try { products.set(id, await sellerApi.product(id, signal)); }
+   catch (error) {
+     // Catalog soft-deletes do not remove fulfillment rows. Skip only missing products;
+     // authentication, permission, network and malformed responses must still surface.
+     if (!(error instanceof ApiError) || error.status !== 404) throw error;
+   }
+ }));
+ return {inventories: inventories.filter(row => products.has(row.productId)),products};
 }
 export async function loadSellerOrders(signal?: AbortSignal) {
  const orders:Order[]=[];
@@ -78,10 +88,17 @@ export async function loadSellerOrders(signal?: AbortSignal) {
 }
 
 export interface Auction {id:string;productId:string;sellerId:string;startingPrice:number;currentPrice:number;startTime:string;endTime:string;status:string;highestBidderId?:string;acceptedBidCount?:number}
-export async function loadSellerAuctions(sellerId:string,signal?:AbortSignal){const rows:Auction[]=[];for(let page=0;;page++){const result=await rawGet<Page<Auction>>('/auction/auctions?page='+page+'&size=100',signal);if(!result||!Array.isArray(result.content))throw new Error('Phản hồi đấu giá không hợp lệ.');rows.push(...result.content.filter(a=>a.sellerId===sellerId));if(result.last||page+1>=result.totalPages)break;}return Promise.all(rows.map(a=>rawGet<Auction>('/auction/auctions/'+encodeURIComponent(a.id),signal)));}
+export async function loadSellerAuctions(sellerId:string,signal?:AbortSignal){const rows:Auction[]=[];for(let page=0;;page++){const result=await rawGet<Page<Auction>>('/auction/auctions?page='+page+'&size=100',signal);if(!result||!Array.isArray(result.content)||!Number.isInteger(result.totalPages)||result.totalPages<0||typeof result.last!=='boolean')throw new Error('Phản hồi đấu giá không hợp lệ.');rows.push(...result.content.filter(a=>a.sellerId===sellerId));if(result.last||page+1>=result.totalPages)break;}return Promise.all(rows.map(a=>rawGet<Auction>('/auction/auctions/'+encodeURIComponent(a.id),signal)));}
 export const mutateAuction=(id:string|null,data?:unknown)=>rawRequest<Auction>('/seller/auction/auctions'+(id?'/'+encodeURIComponent(id):''),json(id?'PUT':'POST',data));
 export const cancelAuction=(id:string)=>rawRequest<Auction>('/seller/auction/auctions/'+encodeURIComponent(id)+'/cancel',json('POST'));
 
 export interface Shipment {id:string;orderId:string;trackingNumber?:string;status:string}
 export const createShipment=(orderId:string,trackingNumber:string)=>rawRequest<Shipment>('/seller/fulfillment/shipments',json('POST',{orderId,trackingNumber}));
 export const updateShipment=(id:string,status:string)=>rawRequest<Shipment>('/seller/fulfillment/shipments/'+encodeURIComponent(id)+'/status',json('PATCH',{status}));
+
+/** Product PUT replaces its image list, so preserve the independent primary URL. */
+export function productImagesForUpdate(product: { images?: string[]; primaryImageUrl?: string | null }) {
+  const images = product.images ?? [];
+  const primaryIndex = Math.max(0, images.indexOf(product.primaryImageUrl ?? ''));
+  return images.map((imageUrl, index) => ({ imageUrl, primary: index === primaryIndex }));
+}

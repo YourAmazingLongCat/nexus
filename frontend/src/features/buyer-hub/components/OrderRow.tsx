@@ -10,7 +10,7 @@ interface OrderRowProps {
 }
 
 export default function OrderRow({ order, onTrack, onCancel, onReview, onRebuy }: OrderRowProps) {
-  const isShipping = order.state !== 'completed';
+  const isShipping = ['pending', 'confirmed', 'shipping'].includes(order.state);
 
   return (
     <article className="nx-hub-order">
@@ -60,7 +60,7 @@ export default function OrderRow({ order, onTrack, onCancel, onReview, onRebuy }
                 Hủy đơn hàng
               </button>
             </>
-          ) : (
+          ) : order.state === 'completed' ? (
             <>
               <button
                 type="button"
@@ -78,7 +78,7 @@ export default function OrderRow({ order, onTrack, onCancel, onReview, onRebuy }
                 Mua lại
               </button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </article>

@@ -2,7 +2,7 @@
 export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 export interface CatalogProduct {
   id: string; name: string; basePrice: number; status: ProductStatus;
-  sellerId: string; categoryId: string; categoryName: string | null;
+  sellerId: string; categoryId: string | null; categoryName: string | null;
   primaryImageUrl: string | null; createdAt: string;
 }
 export interface CatalogProductDetail extends CatalogProduct {
@@ -10,7 +10,7 @@ export interface CatalogProductDetail extends CatalogProduct {
 }
 export interface CatalogCategory {
   id: string; name: string; description: string | null; parentId: string | null;
-  status: 'ACTIVE' | 'INACTIVE'; sortOrder: number; children: CatalogCategory[];
+  status: 'ACTIVE' | 'INACTIVE'; sortOrder: number | null; children: CatalogCategory[];
 }
 export interface CatalogPage<T> {
   content: T[]; page: number; size: number; totalElements: number; totalPages: number;
@@ -41,7 +41,7 @@ export function adaptProduct(value: unknown): CatalogProduct {
   if (typeof product.basePrice !== 'number' || !Number.isFinite(product.basePrice) || product.basePrice < 0 || !['DRAFT', 'ACTIVE', 'INACTIVE'].includes(String(product.status))) return invalid();
   return {
     id: text(product.id), name: text(product.name), basePrice: product.basePrice, status: product.status as ProductStatus,
-    sellerId: text(product.sellerId), categoryId: text(product.categoryId), categoryName: nullableText(product.categoryName),
+    sellerId: text(product.sellerId), categoryId: nullableText(product.categoryId), categoryName: nullableText(product.categoryName),
     primaryImageUrl: nullableText(product.primaryImageUrl), createdAt: text(product.createdAt)
   };
 }
@@ -55,7 +55,7 @@ export function adaptCategory(value: unknown): CatalogCategory {
   if (!Array.isArray(category.children) || !['ACTIVE', 'INACTIVE'].includes(String(category.status))) return invalid();
   return {
     id: text(category.id), name: text(category.name), description: nullableText(category.description), parentId: nullableText(category.parentId),
-    status: category.status as CatalogCategory['status'], sortOrder: nonnegativeInteger(category.sortOrder), children: category.children.map(adaptCategory)
+    status: category.status as CatalogCategory['status'], sortOrder: category.sortOrder == null ? null : nonnegativeInteger(category.sortOrder), children: category.children.map(adaptCategory)
   };
 }
 export function flattenCategories(tree: CatalogCategory[]): CatalogCategory[] {

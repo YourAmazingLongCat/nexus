@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadSellerInventory, messageOf, sellerApi } from '../../seller-hub/services/seller.api';
+import { loadSellerInventory, productImagesForUpdate, messageOf, sellerApi } from '../../seller-hub/services/seller.api';
 import type { InventoryProduct } from '../types/inventory';
 
 import { notify } from '../../../shared/components/Toast';
@@ -8,7 +8,7 @@ export function useInventory() {
   const navigate = useNavigate();
   const [products,setProducts]=useState<InventoryProduct[]>([]);
   const [loading,setLoading]=useState(true); const [error,setError]=useState('');
-  useEffect(()=>{const c=new AbortController();loadSellerInventory(c.signal).then(data=>setProducts(data.inventories.map(row=>{const p=data.products.get(row.productId)!;return {id:row.id,productId:p.id,description:p.description??'',images:p.images,name:p.name,sku:row.skuCode,category:p.categoryName,categoryId:p.categoryId,image:p.images[0]??'',condition:'Chưa có dữ liệu',conditionId:'',photoLabel:'',price:Number(p.basePrice),priceNote:p.status,stock:String(row.availableQuantity),sold:'—',views:'—',engagement:'Chưa có API thống kê',status:row.availableQuantity===0?'out':'listed',visible:p.status==='ACTIVE'};}))).catch(e=>{if(!c.signal.aborted){setError(messageOf(e));notify.warning(messageOf(e));}}).finally(()=>{if(!c.signal.aborted)setLoading(false);});return()=>c.abort();},[]);
+  useEffect(()=>{const c=new AbortController();loadSellerInventory(c.signal).then(data=>setProducts(data.inventories.map(row=>{const p=data.products.get(row.productId)!;return {id:row.id,productId:p.id,description:p.description??'',images:p.images,primaryImageUrl:p.primaryImageUrl,name:p.name,sku:row.skuCode,category:p.categoryName,categoryId:p.categoryId,image:p.primaryImageUrl??p.images[0]??'',condition:'Chưa có dữ liệu',conditionId:'',photoLabel:'',price:Number(p.basePrice),priceNote:p.status,stock:String(row.availableQuantity),sold:'—',views:'—',engagement:'Chưa có API thống kê',status:row.availableQuantity===0?'out':'listed',visible:p.status==='ACTIVE'};}))).catch(e=>{if(!c.signal.aborted){setError(messageOf(e));notify.warning(messageOf(e));}}).finally(()=>{if(!c.signal.aborted)setLoading(false);});return()=>c.abort();},[]);
   const [tab, setTab] = useState('all');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -18,7 +18,7 @@ export function useInventory() {
   const [selected, setSelected] = useState<string[]>([]);
   const action = async (label:string,_id?:string) => {if(label.includes('Đăng bán sản phẩm mới')){navigate('/seller/products/new');return;}const row=products.find(p=>p.id===_id);if(row?.productId){
  try{if(label==='Xem sản phẩm'){navigate('/products/'+row.productId);return;}
- if(label==='Chỉnh sửa'){const name=window.prompt('Tên sản phẩm:',row.name);if(name===null)return;const description=window.prompt('Mô tả:',row.description??'');if(description===null)return;const amount=window.prompt('Giá bán:',String(row.price));if(amount===null)return;const basePrice=Number(amount);if(!name.trim()||!Number.isFinite(basePrice)||basePrice<=0){notify.warning('Tên và giá bán không hợp lệ.');return;}const p=await sellerApi.updateProduct(row.productId,{name:name.trim(),description,basePrice,images:(row.images??[]).map((imageUrl,i)=>({imageUrl,primary:i===0}))});setProducts(old=>old.map(v=>v.productId===p.id?{...v,name:p.name,description:p.description??'',price:Number(p.basePrice)}:v));notify.success('Đã cập nhật sản phẩm.');return;}
+ if(label==='Chỉnh sửa'){const name=window.prompt('Tên sản phẩm:',row.name);if(name===null)return;const description=window.prompt('Mô tả:',row.description??'');if(description===null)return;const amount=window.prompt('Giá bán:',String(row.price));if(amount===null)return;const basePrice=Number(amount);if(!name.trim()||!Number.isFinite(basePrice)||basePrice<=0){notify.warning('Tên và giá bán không hợp lệ.');return;}const p=await sellerApi.updateProduct(row.productId,{name:name.trim(),description,basePrice,images:productImagesForUpdate(row)});setProducts(old=>old.map(v=>v.productId===p.id?{...v,name:p.name,description:p.description??'',price:Number(p.basePrice)}:v));notify.success('Đã cập nhật sản phẩm.');return;}
  if(label==='Xóa sản phẩm'){if(!window.confirm('Xóa sản phẩm này?'))return;await sellerApi.deleteProduct(row.productId);setProducts(old=>old.filter(p=>p.productId!==row.productId));notify.success('Đã xóa sản phẩm.');return;}
  if(label==='Nhập thêm'){const input=window.prompt('Số lượng nhập thêm:');if(input===null)return;const quantity=Number(input);if(!Number.isInteger(quantity)||quantity<=0){notify.warning('Nhập số nguyên dương.');return;}const inv=await sellerApi.updateInventory(row.id,'INCREASE',quantity);setProducts(old=>old.map(v=>v.id===row.id?{...v,stock:String(inv.availableQuantity),status:inv.availableQuantity?'listed':'out'}:v));notify.success('Đã cập nhật tồn kho.');return;}
  }catch(e){notify.warning(messageOf(e));return;}}

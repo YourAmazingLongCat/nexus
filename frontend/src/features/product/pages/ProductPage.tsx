@@ -125,7 +125,7 @@ function ProductPage() {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Nhập tên sản phẩm…"
+              placeholder={mode === 'auction' ? 'Nhập UUID sản phẩm hoặc người bán…' : 'Nhập tên sản phẩm…'}
             />
           </label>
           {activeFilters.length > 0 && (

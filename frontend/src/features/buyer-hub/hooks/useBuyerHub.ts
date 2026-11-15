@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { apiErrorMessage } from '../../../services/api/client';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { notify } from '../../../shared/components/Toast';
 import { commerceApi, type CommerceOrder } from '../../../services/api/commerce';
@@ -6,7 +7,7 @@ import { buyerApi, type BuyerProfileResponse } from '../../../services/api/buyer
 import type { AuctionFilterId, BidStatus, BuyerBid, BuyerHubTabId, BuyerOrder, BuyerProfile, C2cDraft, OrderFilterId, SavedItem } from '../types/buyerHub';
 const initialDraft: C2cDraft = { name: '', category: '', duration: '', startPrice: '', stepPrice: '', escrow: false };
 const unavailable = () => notify.info('Backend chưa cung cấp chức năng này. Không có thay đổi nào được thực hiện.');
-const report = (error: unknown) => notify.error(error instanceof Error ? error.message : 'Không thể kết nối máy chủ.');
+const report = (error: unknown) => notify.error(apiErrorMessage(error));
 
 export function useBuyerHub() {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ export function useBuyerHub() {
   const [busy, setBusy] = useState(false);
   const handleCancelOrder = async (code: string) => {
     const order = findOrder(code); if (!order || busy) return;
+    if (['COMPLETED', 'CANCELLED'].includes(order.status)) { notify.warning('Đơn hàng đã kết thúc, không thể hủy.'); return; }
     if (!window.confirm(`Hủy đơn ${code}?`)) return;
     setBusy(true);
     try {
