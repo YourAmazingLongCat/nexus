@@ -13,6 +13,15 @@ test('buyer hub route uses buyer layout and renders source mock dashboard', asyn
     assert.match(html, /nx-buyer-layout/);
     assert.match(html, /nx-hub-page/);
     assert.match(html, /Alex Nguyen/);
+    assert.match(html, /DEMO.*dữ liệu mẫu/);
+    const { matchesAuctionFilter } = await server.ssrLoadModule('/src/features/buyer-hub/hooks/useBuyerHub.ts');
+    assert.equal(matchesAuctionFilter('lost', 'won'), false);
+    assert.equal(matchesAuctionFilter('won', 'won'), true);
+    assert.equal(matchesAuctionFilter('lost', 'all'), true);
+    const { default: DemoOrders } = await server.ssrLoadModule('/src/features/buyer-hub/components/DemoOrders.tsx');
+    const demo = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(DemoOrders)));
+    assert.match(demo, /Đơn hàng DEMO của bạn/);
+    assert.match(demo, /Chưa có đơn hàng DEMO/);
     assert.match(html, /id="hub-panel-auctions"/);
     for (const tab of ['auctions', 'orders', 'cart', 'c2c']) assert.match(html, new RegExp(`id="hub-tab-${tab}"`));
     assert.equal((html.match(/<header class="nexus-header/g) || []).length, 1);
@@ -23,7 +32,7 @@ test('buyer hub route uses buyer layout and renders source mock dashboard', asyn
     assert.match(orders, /id="hub-panel-orders"/);
     const { default: SavedCartTab } = await server.ssrLoadModule('/src/features/buyer-hub/components/SavedCartTab.tsx');
     const empty = renderToStaticMarkup(createElement(SavedCartTab, { title: '', summary: '', selectAllLabel: '', items: [] }));
-    assert.match(empty, /Giỏ hàng của bạn đang trống/);
+    assert.match(empty, /Chưa có sản phẩm đã lưu/);
     assert.match(empty, /aria-pressed="false"/);
     const helpers = await server.ssrLoadModule('/src/features/buyer-hub/utils/buyerHub.format.ts');
     assert.equal(helpers.formatWinCountdown(3661), 'Còn 01:01:01');
@@ -55,6 +64,6 @@ test('buyer hub route uses buyer layout and renders source mock dashboard', asyn
     }));
     assert.match(saved, /Đã chọn 1 mục/);
     assert.match(saved, /34.900.000 đ/);
-    assert.match(saved, /Thanh toán đã chọn/);
+    assert.match(saved, /Chuyển đã chọn vào giỏ DEMO/);
   } finally { await server.close(); }
 });

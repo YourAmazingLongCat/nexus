@@ -3,10 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getSession, logout } from '../../../features/auth/services/auth.api';
 import NexusLogo from '../Logo/NexusLogo';
 import { notify } from '../Toast';
+import { useDemoStore } from '../../demo/demoStore';
 import './Header.css';
 
 function Header() {
   const navigate = useNavigate();
+  const demo = useDemoStore();
+  const cartCount = demo.cart.reduce((sum, item) => sum + item.quantity, 0);
   const [session, setSession] = useState(getSession);
   async function handleLogout(event) {
     event.preventDefault();
@@ -202,7 +205,7 @@ function Header() {
                 title="Thông báo"
                 aria-label="Thông báo"
               >
-                <i className="bi bi-bell"></i>
+                <i className="bi bi-bell" aria-hidden="true"></i>
                 <span className="badge-counter badge-red">3</span>
               </button>
 
@@ -257,16 +260,16 @@ function Header() {
                 className="icon-btn-badge"
                 onClick={() => setShowCartPreview(!showCartPreview)}
                 title="Giỏ hàng"
-                aria-label="Giỏ hàng"
+                aria-label={`Giỏ hàng, ${cartCount} sản phẩm`}
               >
-                <i className="bi bi-cart2"></i>
-                <span className="badge-counter badge-blue">2</span>
+                <i className="bi bi-cart2" aria-hidden="true"></i>
+                <span className="badge-counter badge-blue" aria-hidden="true">{cartCount > 99 ? '99+' : cartCount}</span>
               </button>
 
               {showCartPreview && (
                 <div className="dropdown-menu-custom popover-menu-right">
                   <div className="d-flex justify-content-between align-items-center px-3 pb-2 border-bottom">
-                    <span className="fw-bold small">Giỏ hàng của bạn (2)</span>
+                    <span className="fw-bold small">Giỏ hàng của bạn ({cartCount})</span>
                     <button
                       type="button"
                       className="text-primary small border-0 bg-transparent p-0"
@@ -276,40 +279,19 @@ function Header() {
                     </button>
                   </div>
                   <div className="p-2">
-                    <div className="d-flex gap-2 align-items-center p-2 border-bottom small">
-                      <div
-                        className="bg-light rounded p-2 text-center"
-                        style={{ width: '40px', height: '40px' }}
-                      >
-                        <i className="bi bi-laptop"></i>
-                      </div>
-                      <div className="flex-grow-1">
-                        <div
-                          className="fw-semibold text-truncate"
-                          style={{ maxWidth: '180px' }}
-                        >
-                          MacBook Pro M3 Max 16"
-                        </div>
-                        <div className="text-primary fw-bold">54.990.000₫</div>
-                      </div>
-                    </div>
-                    <div className="d-flex gap-2 align-items-center p-2 small">
-                      <div
-                        className="bg-light rounded p-2 text-center"
-                        style={{ width: '40px', height: '40px' }}
-                      >
-                        <i className="bi bi-watch"></i>
-                      </div>
-                      <div className="flex-grow-1">
-                        <div
-                          className="fw-semibold text-truncate"
-                          style={{ maxWidth: '180px' }}
-                        >
-                          Đồng hồ Vintage Omega Seamaster
-                        </div>
-                        <div className="text-primary fw-bold">18.500.000₫</div>
-                      </div>
-                    </div>
+                    {demo.cart.length === 0 && <p className="small text-muted p-2 mb-0">Giỏ hàng đang trống.</p>}
+                    {demo.cart.slice(0, 4).map((item) => {
+                      const product = demo.products.find((entry) => entry.id === item.productId);
+                      if (!product) return null;
+                      return (
+                        <Link key={item.productId} to={`/products/${product.id}`} className="d-flex gap-2 align-items-center p-2 border-bottom small text-decoration-none" onClick={() => setShowCartPreview(false)}>
+                          <div className="flex-grow-1">
+                            <div className="fw-semibold text-truncate" style={{ maxWidth: '240px' }}>{product.title}</div>
+                            <div className="text-primary fw-bold">{new Intl.NumberFormat('vi-VN').format(product.price)} ₫ × {item.quantity}</div>
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                   <div className="p-3 bg-light rounded-bottom text-center">
                     <button

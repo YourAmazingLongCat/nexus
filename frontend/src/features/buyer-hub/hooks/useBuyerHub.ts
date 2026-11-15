@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { demoActions, useDemoStore } from '../../../shared/demo/demoStore';
 import { notify } from '../../../shared/components/Toast';
 import {
   auctionWinNotice,
   buyerBids,
   buyerOrders,
   c2cInitialDraft,
-  savedItems as savedItemsMock,
 } from '../mocks/buyerHub.mock';
 import type {
   AuctionFilterId,
@@ -17,11 +17,7 @@ import type {
   SavedItem,
 } from '../types/buyerHub';
 
-/**
- * UI-only Buyer Hub state.
- * Every interactive handler stops at a toast — no buyer hub endpoint is called
- * while the project is still in the mock phase.
- */
+/** Shared demo saved items; auction and sample order operations remain unconnected. */
 export function useBuyerHub() {
   const [activeTab, setActiveTab] = useState<BuyerHubTabId>('auctions');
   const [auctionFilter, setAuctionFilter] = useState<AuctionFilterId>('all');
@@ -29,7 +25,17 @@ export function useBuyerHub() {
   const [auctionSearch, setAuctionSearch] = useState('');
   const [bids, setBids] = useState<BuyerBid[]>(buyerBids);
   const [winRemaining, setWinRemaining] = useState(auctionWinNotice.remainingSeconds);
-  const [items, setItems] = useState<SavedItem[]>(savedItemsMock);
+  const { products, saved, orders } = useDemoStore();
+  const [savedOptions, setSavedOptions] = useState<Record<string, { selected: boolean; quantity: number }>>({});
+  const items = useMemo<SavedItem[]>(() => saved.flatMap((id) => {
+    const product = products.find((entry) => entry.id === id);
+    if (!product) return [];
+    const options = savedOptions[id] ?? { selected: false, quantity: 1 };
+    return [{ id, name: product.title, seller: 'Nexus DEMO', condition: product.condition,
+      unitPrice: product.price, quantity: Math.min(options.quantity, Math.max(1, product.quantity)),
+      maxQuantity: product.quantity, icon: 'bi-box-seam', image: product.image,
+      selected: options.selected && product.quantity > 0 }];
+  }), [products, saved, savedOptions]);
   const [c2cDraft, setC2cDraft] = useState<C2cDraft>(c2cInitialDraft);
 
   // Client-side countdowns so the timers look alive while the page is open.
@@ -63,11 +69,7 @@ export function useBuyerHub() {
     const keyword = auctionSearch.trim().toLowerCase();
 
     return bids.filter((bid) => {
-      const matchesFilter =
-        auctionFilter === 'all' ||
-        (auctionFilter === 'leading' && bid.status === 'leading') ||
-        (auctionFilter === 'outbid' && bid.status === 'outbid') ||
-        (auctionFilter === 'won' && bid.status === 'lost');
+      const matchesFilter = matchesAuctionFilter(bid.status, auctionFilter);
 
       if (!matchesFilter) return false;
       if (!keyword) return true;
@@ -147,37 +149,47 @@ export function useBuyerHub() {
   };
 
   const handleToggleItem = (id: string) => {
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)),
-    );
+    const item = items.find((entry) => entry.id === id);
+    if (!item || item.maxQuantity < 1) return;
+    setSavedOptions((current) => ({ ...current, [id]: { quantity: item.quantity, selected: !item.selected } }));
   };
-
   const handleSelectAllItems = () => {
-    const allSelected = items.every((item) => item.selected);
-    setItems((current) => current.map((item) => ({ ...item, selected: !allSelected })));
+    const available = items.filter((item) => item.maxQuantity > 0);
+    const selected = !available.every((item) => item.selected);
+    setSavedOptions((current) => ({ ...current, ...Object.fromEntries(available.map((item) =>
+      [item.id, { quantity: item.quantity, selected }])) }));
   };
-
   const handleQuantityChange = (id: string, quantity: number) => {
-    setItems((current) =>
-      current.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.min(Math.max(1, quantity), item.maxQuantity) }
-          : item,
-      ),
-    );
+    const item = items.find((entry) => entry.id === id);
+    if (!item || item.maxQuantity < 1) return;
+    setSavedOptions((current) => ({ ...current, [id]: {
+      selected: item.selected, quantity: Math.min(Math.max(1, quantity), item.maxQuantity),
+    } }));
   };
-
   const handleRemoveItem = (id: string) => {
-    setItems((current) => current.filter((item) => item.id !== id));
-    notify.success('Đã xóa sản phẩm khỏi giỏ hàng.');
+    if (saved.includes(id)) demoActions.toggleSaved(id);
   };
-
-  const handleCheckoutSelected = () => {
-    if (selectedItemCount === 0) {
-      notify.warning('Vui lòng chọn ít nhất một sản phẩm để thanh toán.');
+  const handleMoveToCart = (id: string) => {
+    const item = items.find((entry) => entry.id === id);
+    if (!item || item.maxQuantity < 1) return;
+    if (!demoActions.addToCart(id, item.quantity)) {
+      notify.warning('Không thể chuyển: số lượng trong giỏ vượt tồn kho DEMO. Sản phẩm vẫn được lưu.');
       return;
     }
-    notify.info('Thanh toán giỏ hàng chưa được kết nối trong giai đoạn giao diện.');
+    demoActions.toggleSaved(id);
+    notify.info('Đã chuyển vào giỏ hàng DEMO. Chưa phát sinh giao dịch thật.');
+  };
+  const handleCheckoutSelected = () => {
+    if (selectedItemCount === 0) return;
+    let moved = 0;
+    items.filter((item) => item.selected).forEach((item) => {
+      if (demoActions.addToCart(item.id, item.quantity)) {
+        demoActions.toggleSaved(item.id);
+        moved += 1;
+      }
+    });
+    if (moved) notify.info('Đã chuyển ' + moved + ' mục vào giỏ hàng DEMO. Chưa phát sinh giao dịch thật.');
+    if (moved < selectedItemCount) notify.warning('Một số mục vượt tồn kho DEMO và vẫn được lưu.');
   };
 
   const handleC2cViewBidders = (bidCount: number) => {
@@ -221,6 +233,9 @@ export function useBuyerHub() {
   };
 
   return {
+    demoOrderCount: orders.length,
+    savedCount: saved.length,
+    handleMoveToCart,
     activeTab,
     setActiveTab,
     auctionFilter,
@@ -269,5 +284,11 @@ export type UseBuyerHub = ReturnType<typeof useBuyerHub>;
 export function resolveBidStatusLabel(status: BidStatus): string {
   if (status === 'outbid') return 'Bị vượt giá';
   if (status === 'leading') return 'Bạn đang dẫn đầu';
+  if (status === 'won') return 'Thắng thầu';
   return 'Đã kết thúc (Thua thầu)';
+}
+
+/** Lost sample bids must never appear under the won filter. */
+export function matchesAuctionFilter(status: BidStatus, filter: AuctionFilterId): boolean {
+  return filter === 'all' || status === filter;
 }

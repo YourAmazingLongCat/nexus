@@ -16,6 +16,8 @@ test('seller hub integrates seller layout, listing form, mock inventory and head
     assert.match(html, /id="seller-listing-form"/);
     for (const tab of ['products', 'auctions', 'orders', 'reports']) assert.match(html, new RegExp('id="hub-tab-' + tab + '"'));
     assert.match(html, /aria-selected="true"/);
+    for (const tab of ['products', 'auctions', 'orders', 'reports']) assert.match(html, new RegExp('id="hub-tab-' + tab + '"'));
+    assert.match(html, /aria-selected="true"/);
     assert.match(html, /href="\/seller-hub"/);
     assert.match(html, /Dell XPS 15 9530/);
     assert.equal((html.match(/<header class="nexus-header/g) || []).length, 1);
@@ -29,7 +31,8 @@ test('seller hub integrates seller layout, listing form, mock inventory and head
     assert.match(empty, /Không có sản phẩm khớp bộ lọc hiện tại/);
     assert.match(empty, /Hiển thị 0 sản phẩm khớp bộ lọc/);
     const { default: QuickListing } = await server.ssrLoadModule('/src/features/seller-hub/components/QuickListing.tsx');
-    const collapsed = renderToStaticMarkup(createElement(QuickListing, { hub: { collapsed: true, draft: initialDraft, imageNames: [] } }));
+    const collapsed = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(QuickListing, { hub: { collapsed: true, draft: initialDraft, imageNames: [] } })));
+    assert.match(collapsed, /href="\/seller\/products\/new"/);
     assert.match(collapsed, /aria-expanded="false"/);
     assert.doesNotMatch(collapsed, /<form/);
   } finally { await server.close(); }

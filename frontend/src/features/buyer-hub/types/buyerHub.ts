@@ -9,7 +9,7 @@ export type AuctionFilterId = 'all' | 'leading' | 'outbid' | 'won';
 
 export type OrderFilterId = 'all' | 'shipping' | 'completed' | 'cancelled';
 
-export type BidStatus = 'outbid' | 'leading' | 'lost';
+export type BidStatus = 'outbid' | 'leading' | 'lost' | 'won';
 
 export type OrderState = 'shipping' | 'completed';
 
@@ -117,6 +117,7 @@ export interface BuyerOrder {
 }
 
 export interface SavedItem {
+  image?: string;
   id: string;
   name: string;
   seller: string;

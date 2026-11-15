@@ -9,7 +9,7 @@ export default function ListingHeader({ hub }: { hub: CreateListingState }) {
           <span className="nx-listing-badge">SELLER HUB PRO</span>
           <span className="nx-listing-saved">
             <i aria-hidden="true" />
-            Bản nháp tự động lưu lúc 14:32
+            {hub.saved ? 'Bản nháp đã lưu trên thiết bị' : 'Lưu bản nháp để giữ thay đổi'}
           </span>
         </div>
         <h1>Đăng Bán Sản Phẩm Mới (Thêm vào Kho &amp; Niêm Yết)</h1>
@@ -19,7 +19,7 @@ export default function ListingHeader({ hub }: { hub: CreateListingState }) {
         </p>
       </div>
       <div className="nx-listing-header-actions">
-        <button type="button" className="nx-listing-btn" onClick={() => hub.mockAction('Lưu bản nháp')}>
+        <button type="button" className="nx-listing-btn" onClick={hub.saveDraft}>
           <i className="bi bi-save" aria-hidden="true" />
           Lưu bản nháp
         </button>

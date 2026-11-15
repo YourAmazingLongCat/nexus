@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
+import { useDemoStore } from '../../../shared/demo/demoStore';
+import type { SellerOrder } from '../types/sellerHub';
 import { notify } from '../../../shared/components/Toast';
-import { initialDraft, initialProducts, sellerAuctions, sellerOrders } from '../mocks/sellerHub.mock';
+import { initialDraft, initialProducts, sellerAuctions } from '../mocks/sellerHub.mock';
 import type { ListingDraft, ProductStatus, SellerTabId } from '../types/sellerHub';
 
 export function useSellerHub() {
@@ -31,11 +33,19 @@ export function useSellerHub() {
     () => sellerAuctions.filter(auction => auctionFilter === 'all' || auction.state === auctionFilter),
     [auctionFilter],
   );
-  const visibleOrders = useMemo(
-    () => sellerOrders.filter(order => orderFilter === 'all' || order.status === orderFilter),
-    [orderFilter],
-  );
-  const pendingOrders = useMemo(() => sellerOrders.filter(order => order.status === 'pending').length, []);
+  const { orders: demoOrders } = useDemoStore();
+  const orders: SellerOrder[] = demoOrders.map(order => ({
+    id: order.id, code: order.id, buyer: 'Khách mua DEMO', contact: 'Không có dữ liệu liên hệ thật',
+    items: order.items.map(item => item.title).join(', '),
+    itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0) + ' sản phẩm', total: order.total,
+    method: 'DEMO • Chưa vận chuyển', express: false,
+    status: order.status === 'placed' ? 'pending' : order.status === 'fulfilled' ? 'done' : 'packing',
+    placedAt: new Date(order.createdAt).toLocaleString('vi-VN'), deadline: 'Mô phỏng • không có hạn giao thật',
+  }));
+  const visibleOrders = orders.filter(order => orderFilter === 'all' || order.status === orderFilter);
+  const pendingOrders = orders.filter(order => order.status === 'pending').length;
+  const orderCounts = Object.fromEntries(['all', 'pending', 'packing', 'shipping', 'done', 'cancelled'].map(status =>
+    [status, status === 'all' ? orders.length : orders.filter(order => order.status === status).length]));
   function updateDraft<K extends keyof ListingDraft>(key: K, value: ListingDraft[K]) {
     setDraft(previous => ({ ...previous, [key]: value }));
   }
@@ -59,6 +69,6 @@ export function useSellerHub() {
   function focusListing() { setCollapsed(false); requestAnimationFrame(() => nameRef.current?.focus()); }
   return { activeTab, setActiveTab, draft, updateDraft, search, setSearch, status, setStatus, sort, setSort, selected, toggleSelected, toggleAll,
     collapsed, setCollapsed, imageNames, setImageNames, nameRef, visibleProducts, changeStock, submitListing, focusListing, mockAction,
-    auctionFilter, setAuctionFilter, visibleAuctions, orderFilter, setOrderFilter, visibleOrders, pendingOrders, reportRange, setReportRange };
+    auctionFilter, setAuctionFilter, visibleAuctions, orderFilter, setOrderFilter, visibleOrders, pendingOrders, orderCounts, reportRange, setReportRange };
 }
 export type SellerHubState = ReturnType<typeof useSellerHub>;

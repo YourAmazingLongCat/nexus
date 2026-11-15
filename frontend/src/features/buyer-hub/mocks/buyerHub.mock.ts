@@ -89,7 +89,7 @@ export const auctionWinNotice: AuctionWinNotice = {
 export const hubTabs: HubTab[] = [
   { id: 'auctions', label: 'Đấu Giá Của Tôi', icon: 'bi-hammer', count: 4 },
   { id: 'orders', label: 'Quản Lý Đơn Hàng', icon: 'bi-box-seam', count: 3 },
-  { id: 'cart', label: 'Giỏ & Đã Lưu', icon: 'bi-heart', count: 6 },
+  { id: 'cart', label: 'Đã Lưu DEMO', icon: 'bi-heart', count: 6 },
   {
     id: 'c2c',
     label: 'Phiên Tôi Tự Mở (C2C)',
@@ -100,10 +100,10 @@ export const hubTabs: HubTab[] = [
 ];
 
 export const auctionFilters: FilterChipOption<AuctionFilterId>[] = [
-  { id: 'all', label: 'Tất cả', count: 5 },
+  { id: 'all', label: 'Tất cả', count: 4 },
   { id: 'leading', label: 'Đang dẫn đầu', count: 1 },
   { id: 'outbid', label: 'Bị vượt giá', count: 2 },
-  { id: 'won', label: 'Thắng thầu', count: 1 },
+  { id: 'won', label: 'Thắng thầu', count: 0 },
 ];
 
 export const buyerBids: BuyerBid[] = [

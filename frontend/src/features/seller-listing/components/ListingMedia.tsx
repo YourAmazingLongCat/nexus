@@ -1,12 +1,13 @@
-import { listingMediaSlots } from '../mocks/createListing.mock';
+import { useRef } from 'react';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
 // Bước 2 — Bộ sưu tập ảnh/video kiểm định.
 export default function ListingMedia({ hub }: { hub: CreateListingState }) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div>
-      <div className="nx-listing-media-grid">
-        {listingMediaSlots.map(slot => (
+      <p>Ảnh tải lên chỉ xem trước trong phiên này, không lưu vào bản nháp hay sản phẩm. Sản phẩm demo dùng ảnh mẫu.</p><input ref={inputRef} type="file" accept="image/*" multiple hidden aria-label="Chọn ảnh sản phẩm" onChange={event => { hub.addMedia(Array.from(event.target.files ?? [])); event.target.value = ""; }} /><div className="nx-listing-media-grid">
+        {hub.media.map(slot => (
           <figure key={slot.id} className="nx-listing-media">
             <img src={slot.image} alt={slot.label} />
             {slot.cover && <span className="nx-listing-media-cover">Ảnh bìa</span>}
@@ -31,7 +32,7 @@ export default function ListingMedia({ hub }: { hub: CreateListingState }) {
                 type="button"
                 className="is-danger"
                 title="Xóa ảnh"
-                onClick={() => hub.mockAction('Xóa ảnh')}
+                onClick={() => hub.removeMedia(slot.id)}
               >
                 <i className="bi bi-trash" aria-hidden="true" />
               </button>
@@ -39,12 +40,12 @@ export default function ListingMedia({ hub }: { hub: CreateListingState }) {
           </figure>
         ))}
 
-        <button type="button" className="nx-listing-media-add" onClick={() => hub.mockAction('Thêm ảnh')}>
+        <button type="button" className="nx-listing-media-add" onClick={() => inputRef.current?.click()}>
           <span className="nx-listing-media-add-icon">
             <i className="bi bi-images" aria-hidden="true" />
           </span>
           <strong>Thêm ảnh</strong>
-          <span>Còn 4 vị trí</span>
+          <span>Còn {9 - hub.media.length} vị trí</span>
         </button>
 
         <button type="button" className="nx-listing-media-video" onClick={() => hub.mockAction('Tải lên Video')}>

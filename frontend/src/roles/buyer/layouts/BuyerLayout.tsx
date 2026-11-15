@@ -1,3 +1,4 @@
+import DemoNotice from '../../../shared/demo/DemoNotice';
 import { Outlet } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -9,12 +10,13 @@ import '../../../shared/styles/theme.css';
 import '../../../features/product/styles/product.css';
 import '../../../features/home/styles/home.css';
 import '../../../features/category/styles/category.css';
-import '../../../features/commerce/cart/styles/cart.css';
+import '../../../features/cart/styles/cart.css';
 import '../../../features/buyer-hub/styles/buyer-hub.css';
 function BuyerLayout() {
   return (
     <div className="nx-buyer-layout">
       <Header />
+      <DemoNotice />
       <Outlet />
       <Footer />
     </div>

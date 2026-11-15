@@ -6,6 +6,7 @@ interface SavedItemRowProps {
   onToggle: (id: string) => void;
   onQuantityChange: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  onMoveToCart: (id: string) => void;
 }
 
 export default function SavedItemRow({
@@ -13,6 +14,7 @@ export default function SavedItemRow({
   onToggle,
   onQuantityChange,
   onRemove,
+  onMoveToCart,
 }: SavedItemRowProps) {
   return (
     <div className="nx-hub-saved-row">
@@ -21,12 +23,13 @@ export default function SavedItemRow({
           type="checkbox"
           className="nx-hub-checkbox"
           checked={item.selected}
+          disabled={item.maxQuantity < 1}
           onChange={() => onToggle(item.id)}
-          aria-label={`Chọn ${item.name} để thanh toán`}
+          aria-label={`Chọn ${item.name} để chuyển vào giỏ`}
         />
 
         <div className="nx-hub-saved-thumb">
-          <i className={`bi ${item.icon}`} aria-hidden="true"></i>
+          <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
 
         <div className="nx-hub-saved-body">
@@ -39,12 +42,16 @@ export default function SavedItemRow({
       </div>
 
       <div className="nx-hub-saved-side">
+        <button type="button" className="nx-hub-bid-btn nx-hub-bid-btn--plain"
+          disabled={item.maxQuantity < 1} onClick={() => onMoveToCart(item.id)}>
+          {item.maxQuantity < 1 ? 'Hết hàng' : 'Chuyển vào giỏ DEMO'}
+        </button>
         <div className="nx-hub-qty" role="group" aria-label={`Số lượng ${item.name}`}>
           <button
             type="button"
             className="nx-hub-qty-btn nx-hub-qty-btn--left"
             onClick={() => onQuantityChange(item.id, item.quantity - 1)}
-            disabled={item.quantity <= 1}
+            disabled={item.quantity <= 1 || item.maxQuantity < 1}
             aria-label={`Giảm số lượng ${item.name}`}
           >
             -
@@ -66,8 +73,8 @@ export default function SavedItemRow({
         <button
           type="button"
           className="nx-hub-saved-remove"
-          title="Xóa khỏi giỏ"
-          aria-label="Xóa khỏi giỏ"
+          title="Bỏ lưu sản phẩm"
+          aria-label="Bỏ lưu sản phẩm"
           onClick={() => onRemove(item.id)}
         >
           <i className="bi bi-trash" aria-hidden="true"></i>

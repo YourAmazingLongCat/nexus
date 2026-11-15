@@ -4,8 +4,8 @@ import HomePage from '../../features/home/pages/HomePage';
 import CategoryPage from '../../features/category/pages/CategoryPage';
 import ProductPage from '../../features/product/pages/ProductPage';
 import ProductDetailPage from '../../features/product/pages/ProductDetailPage';
-import CartPage from './pages/CartPage';
-import BuyerHubPage from './pages/BuyerHubPage';
+import CartPage from '../../features/cart/pages/CartPage';
+import BuyerHubPage from '../../features/buyer-hub/pages/BuyerHubPage';
 
 const buyerRoutes: RouteObject[] = [
   {

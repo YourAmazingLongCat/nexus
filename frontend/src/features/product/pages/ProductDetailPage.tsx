@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { products, formatPrice } from '../services/productService';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { formatPrice } from '../services/productService';
+import { useDemoCatalog } from '../services/demoCatalog';
+import type { Product } from '../types/product';
+import { demoActions, useDemoStore } from '../../../shared/demo/demoStore';
 import { categories } from '../../category/services/categoryService';
 import ProductImage from '../components/ProductImage';
 import ProductAssurance from '../components/ProductAssurance';
@@ -8,9 +11,10 @@ import HeartBurstButton from '../../../shared/components/Button/HeartBurstButton
 import useAddToCartAnimation from '../hooks/useAddToCartAnimation';
 import '../styles/product-detail-animation.css';
 
-// UI-only auction simulation. No payments, persisted cart, or actual bids.
+// Locally persisted demo listings and cart; bidding remains a UI simulation.
 function ProductDetailPage() {
   const { productId } = useParams();
+  const products = useDemoCatalog();
   const product = products.find((p) => p.id === productId);
   if (!product)
     return (
@@ -21,23 +25,29 @@ function ProductDetailPage() {
     );
   return <ProductDetail key={product.id} product={product} />;
 }
-function ProductDetail({ product }: { product: (typeof products)[number] }) {
+function ProductDetail({ product }: { product: Product }) {
+  const navigate = useNavigate();
+  const store = useDemoStore();
+  const saved = store.saved.includes(product.id);
+  const count = store.cart.reduce((sum, item) => sum + item.quantity, 0);
+  const [quantity, setQuantity] = useState(1);
+  const available = product.quantity ?? 99;
+  const inCart = store.cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+  const remaining = Math.max(0, available - inCart);
   const [image, setImage] = useState(0),
-    [saved, setSaved] = useState(false),
-    [mode, setMode] = useState(product.mode),
     [price, setPrice] = useState(product.price),
     [bid, setBid] = useState(product.price + 200000),
     [notice, setNotice] = useState(''),
     [history, setHistory] = useState<number[]>([]),
     [reviews, setReviews] = useState(false);
-  const { added, count, stageRef, imageRef, cartRef, badgeRef, addToCart } =
+  const { added, stageRef, imageRef, cartRef, badgeRef, addToCart } =
     useAddToCartAnimation(() => {
       setNotice(
-        'Đã thêm sản phẩm vào giỏ mô phỏng. Chưa triển khai thanh toán.',
+        'Đã thêm sản phẩm vào giỏ demo. Mở giỏ để tiếp tục.',
       );
     });
   const category = categories.find((c) => c.id === product.categoryId);
-  const auction = mode === 'auction';
+  const auction = product.mode === 'auction';
   const submitBid = () => {
     if (!Number.isFinite(bid) || bid < price + 200000) {
       setNotice('Giá đặt phải cao hơn giá hiện tại ít nhất 200.000 ₫.');
@@ -57,18 +67,14 @@ function ProductDetail({ product }: { product: (typeof products)[number] }) {
             type="button"
             className="u051-detail-cart"
             aria-label={`Giỏ mô phỏng, ${count} sản phẩm`}
-            onClick={() =>
-              setNotice(
-                `Giỏ chi tiết có ${count} sản phẩm mô phỏng. Chưa kết nối giỏ Header.`,
-              )
-            }
+            onClick={() => navigate('/cart')}
           >
             🛒 Giỏ mô phỏng <b ref={badgeRef}>{count}</b>
           </button>
         )}
         <HeartBurstButton
           pressed={saved}
-          onToggle={() => setSaved(!saved)}
+          onToggle={() => demoActions.toggleSaved(product.id)}
           label={saved ? 'Bỏ lưu vào Watchlist' : 'Lưu vào Watchlist'}
           text={saved ? 'Đã lưu' : 'Lưu vào Watchlist'}
           count={142 + (saved ? 1 : 0)}
@@ -155,14 +161,6 @@ function ProductDetail({ product }: { product: (typeof products)[number] }) {
             ⚠ Chú ý: Bản mô phỏng UI. Không phát sinh đấu giá hoặc thanh toán
             thực tế.
           </div>
-          <div className="nx-purchase-tabs">
-            <button aria-pressed={auction} onClick={() => setMode('auction')}>
-              ● Đấu giá trực tiếp
-            </button>
-            <button aria-pressed={!auction} onClick={() => setMode('buy-now')}>
-              ♙ Mua đứt (Buy It Now)
-            </button>
-          </div>
           {auction && (
             <div className="nx-auction-clock">
               <strong>● PHIÊN ĐẤU ĐANG DIỄN RA</strong>
@@ -213,18 +211,29 @@ function ProductDetail({ product }: { product: (typeof products)[number] }) {
               </div>
             </>
           )}
+          {!auction && (
+            <label className="nx-bid-label" htmlFor="purchase-quantity">
+              Số lượng (còn {remaining} có thể thêm)
+              <input id="purchase-quantity" type="number" min={1} max={Math.max(1, remaining)} value={quantity}
+                onChange={(event) => setQuantity(Math.max(1, Math.min(remaining, Math.floor(Number(event.target.value)) || 1)))} />
+            </label>
+          )}
           <button
             type="button"
+            disabled={!auction && remaining < 1}
             className="nx-button nx-button-primary nx-purchase-button"
-            onClick={auction ? submitBid : addToCart}
+            onClick={auction ? submitBid : () => {
+              if (demoActions.addToCart(product.id, quantity)) addToCart();
+              else setNotice('Không đủ số lượng. Vui lòng kiểm tra lại giỏ hàng.');
+            }}
           >
             {auction
               ? '♧ Đặt Giá Thầu (Place Bid)'
               : added
-                ? '✓ Đã thêm (mô phỏng)'
-                : '🛒 Thêm vào giỏ (mô phỏng)'}
+                ? '✓ Đã thêm vào giỏ'
+                : remaining < 1 ? 'Đã đủ số lượng trong giỏ' : '🛒 Thêm vào giỏ demo'}
           </button>
-          <details className="nx-history">
+          {auction && <details className="nx-history">
             <summary>
               Xem lịch sử đấu giá ({product.bids + history.length} lượt ra giá)
             </summary>
@@ -235,7 +244,7 @@ function ProductDetail({ product }: { product: (typeof products)[number] }) {
             ) : (
               <p>Chưa có giá thầu mô phỏng trong phiên này.</p>
             )}
-          </details>
+          </details>}
           {notice && (
             <p role="status" className="nx-notice">
               {notice}
@@ -249,6 +258,7 @@ function ProductDetail({ product }: { product: (typeof products)[number] }) {
           <section className="nx-panel nx-description">
             <h2>Chi tiết sản phẩm & Đánh giá thợ máy</h2>
             <h3>{product.name}</h3>
+            {product.description && <p>{product.description}</p>}
             <p>
               Thiết kế tinh tế, chất lượng được kiểm tra kỹ lưỡng trước khi niêm
               yết trên Nexus. Sản phẩm phù hợp với người dùng yêu thích trải

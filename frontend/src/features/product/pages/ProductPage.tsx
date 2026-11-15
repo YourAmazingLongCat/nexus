@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { categories } from '../../category/services/categoryService';
-import { products } from '../services/productService';
+import { useDemoCatalog } from '../services/demoCatalog';
 import ProductList from '../components/ProductList';
 import ProductFilter from '../components/ProductFilter';
 import ProductSort from '../components/ProductSort';
@@ -16,6 +16,7 @@ const budgetLabels: Record<string, string> = {
 };
 
 function ProductPage() {
+  const products = useDemoCatalog();
   const { categoryId = 'all' } = useParams();
   const [params, setParams] = useSearchParams();
   const requestedMode = params.get('mode');
@@ -33,7 +34,8 @@ function ProductPage() {
   const [sort, setSort] = useState('featured');
   const [budget, setBudget] = useState('all');
   const [pagination, setPagination] = useState({ key: '', page: 1 });
-  const category = categories.find((item) => item.id === categoryId);
+  const category = categories.find((item) => item.id === categoryId) ??
+    (products.some((item) => item.categoryId === categoryId) ? { id: categoryId, name: categoryId } : undefined);
 
   function setMode(value: string) {
     const next = new URLSearchParams(params);

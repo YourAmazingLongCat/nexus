@@ -1,8 +1,10 @@
 ﻿import { useId } from 'react';
+import { Link } from 'react-router-dom';
 import type { SellerHubState } from '../hooks/useSellerHub';
 export default function QuickListing({ hub }: { hub: SellerHubState }) {
   const uploadId = useId();
   return <section className="nx-seller-card nx-seller-listing" aria-labelledby="quick-listing-title">
+    <Link className="nx-seller-button" to="/seller/products/new"><i className="bi bi-plus-circle" aria-hidden="true" /> Đăng bán sản phẩm mới</Link>
     <div className="nx-seller-section-heading"><div><h2 id="quick-listing-title">Đăng bán nhanh (Quick Listing Engine)</h2><p>Tạo mới mã sản phẩm SKU nhanh chóng trong vòng 30 giây để đưa lên kệ sàn Nexus.</p></div><button className="nx-seller-text-button" aria-expanded={!hub.collapsed} aria-controls="seller-listing-form" onClick={() => hub.setCollapsed(!hub.collapsed)}><i className="bi bi-sliders2" aria-hidden="true" /> {hub.collapsed ? 'Mở rộng form' : 'Rút gọn form'}</button></div>
     {!hub.collapsed && <form id="seller-listing-form" onSubmit={event => { event.preventDefault(); hub.submitListing(); }}>
       <div className="nx-seller-listing-fields"><label>Tên sản phẩm niêm yết *<input ref={hub.nameRef} required maxLength={150} placeholder="Ví dụ: Bàn phím cơ Leopold FC980C..." value={hub.draft.name} onChange={event => hub.updateDraft('name', event.target.value)} /></label>

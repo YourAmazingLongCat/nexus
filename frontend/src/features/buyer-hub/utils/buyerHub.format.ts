@@ -1,4 +1,4 @@
-import { formatCountdown, formatVnd } from '../../commerce/cart/utils/cart.format';
+import { formatCountdown, formatVnd } from '../../cart/utils/cart.format';
 
 /**
  * Buyer Hub formatting helpers.

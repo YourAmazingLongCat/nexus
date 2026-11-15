@@ -9,7 +9,7 @@ export default function ListingActionBar({ hub }: { hub: CreateListingState }) {
         Giao dịch được bảo vệ theo điều khoản bảo mật Nexus Seller Protection.
       </p>
       <div className="nx-listing-actionbar-actions">
-        <button type="button" onClick={() => hub.mockAction('Lưu Nháp')}>Lưu Nháp</button>
+        <button type="button" onClick={hub.saveDraft}>Lưu Nháp</button>
         <button type="button" className="is-primary" onClick={hub.submitListing}>
           Đăng Bán Sản Phẩm
         </button>

@@ -13,6 +13,7 @@ interface SavedCartTabProps {
   onSelectAll: () => void;
   onQuantityChange: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  onMoveToCart: (id: string) => void;
   onCheckout?: () => void;
 }
 
@@ -27,6 +28,7 @@ export default function SavedCartTab({
   onSelectAll,
   onQuantityChange,
   onRemove,
+  onMoveToCart,
   onCheckout,
 }: SavedCartTabProps) {
   const allSelected = items.length > 0 && items.every((item) => item.selected);
@@ -57,7 +59,7 @@ export default function SavedCartTab({
 
       <div className="nx-hub-saved-list">
         {items.length === 0 ? (
-          <p className="nx-hub-empty">Giỏ hàng của bạn đang trống.</p>
+          <p className="nx-hub-empty">Chưa có sản phẩm đã lưu. Lưu sản phẩm từ danh mục để xem tại đây.</p>
         ) : (
           items.map((item) => (
             <SavedItemRow
@@ -66,6 +68,7 @@ export default function SavedCartTab({
               onToggle={onToggle}
               onQuantityChange={onQuantityChange}
               onRemove={onRemove}
+              onMoveToCart={onMoveToCart}
             />
           ))
         )}
@@ -84,7 +87,7 @@ export default function SavedCartTab({
             onClick={onCheckout}
             disabled={!hasSelectedItems || !onCheckout}
           >
-            Thanh toán đã chọn
+            Chuyển đã chọn vào giỏ DEMO
           </button>
         </div>
       )}

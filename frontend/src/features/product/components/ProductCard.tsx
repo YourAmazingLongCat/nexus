@@ -1,5 +1,6 @@
 // Lucian UX/UI Prompt #049 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#049
 import { useState } from 'react';
+import { demoActions, useDemoStore } from '../../../shared/demo/demoStore';
 import { Link } from 'react-router-dom';
 import type { Product } from '../types/product';
 import { formatPrice } from '../services/productService';
@@ -9,7 +10,10 @@ import useProductCardMotion from '../hooks/useProductCardMotion';
 import '../styles/product-card-motion.css';
 
 function ProductCard({ product }: { product: Product }) {
-  const [saved, setSaved] = useState(false);
+  const store = useDemoStore();
+  const saved = store.saved.includes(product.id);
+  const inCart = store.cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+  const remaining = (product.quantity ?? 99) - inCart;
   const [added, setAdded] = useState(false);
   const auction = product.mode === 'auction';
   const { cardRef, onPointerMove, onPointerLeave } = useProductCardMotion();
@@ -29,7 +33,7 @@ function ProductCard({ product }: { product: Product }) {
           className="nx-save"
           pressed={saved}
           label={saved ? 'Bỏ lưu sản phẩm' : 'Lưu sản phẩm'}
-          onToggle={() => setSaved(!saved)}
+          onToggle={() => demoActions.toggleSaved(product.id)}
         />
         <Link to={`/products/${product.id}`}>
           <ProductImage
@@ -71,9 +75,10 @@ function ProductCard({ product }: { product: Product }) {
             <>
               <button
                 className="nx-button nx-button-primary"
-                onClick={() => setAdded(!added)}
+                disabled={remaining < 1}
+                onClick={() => setAdded(demoActions.addToCart(product.id))}
               >
-                {added ? '✓ Đã thêm (mock)' : '🛒 Thêm giỏ'}
+                {remaining < 1 ? 'Đã đủ số lượng' : added ? '✓ Đã thêm vào giỏ' : '🛒 Thêm giỏ'}
               </button>
               <Link
                 className="nx-button nx-button-soft"

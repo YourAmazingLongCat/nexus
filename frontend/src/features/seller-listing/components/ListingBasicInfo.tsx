@@ -1,7 +1,5 @@
 import {
   listingBrands,
-  listingCategoryLeaf,
-  listingCategoryPath,
 } from '../mocks/createListing.mock';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
@@ -46,19 +44,7 @@ export default function ListingBasicInfo({ hub }: { hub: CreateListingState }) {
           Danh mục ngành hàng <em>*</em>
         </p>
         <div className="nx-listing-category">
-          <div className="nx-listing-category-path">
-            {listingCategoryPath.map(name => (
-              <span key={name} className="nx-listing-category-item">
-                {name}
-                <i className="bi bi-chevron-right" aria-hidden="true" />
-              </span>
-            ))}
-            <span className="nx-listing-category-item is-leaf">{listingCategoryLeaf}</span>
-          </div>
-          <button type="button" className="nx-listing-link" onClick={() => hub.mockAction('Thay đổi danh mục')}>
-            <i className="bi bi-pencil" aria-hidden="true" />
-            Thay đổi
-          </button>
+<select aria-label="Danh mục ngành hàng" value={hub.category} onChange={event => hub.setCategory(event.target.value)}><option value="">Chọn danh mục</option><option value="camera">Máy ảnh & Ống kính</option><option value="electronics">Điện tử & Công nghệ</option><option value="audio">Âm thanh & Tai nghe</option><option value="accessories">Phụ kiện</option></select>
         </div>
       </div>
 

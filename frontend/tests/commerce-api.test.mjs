@@ -1,0 +1,41 @@
+﻿import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createServer } from 'vite';
+const storage = () => { const map = new Map(); return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key) }; };
+test('buyer commerce uses authenticated real contracts, no payment calls, safe errors and token isolation', async () => {
+    const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
+    const previous = globalThis.fetch; const descriptors = ['localStorage', 'sessionStorage'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]);
+    for (const [key] of descriptors) Object.defineProperty(globalThis, key, { configurable: true, value: storage() });
+    try {
+        const auth = await server.ssrLoadModule('/src/features/auth/services/auth.api.ts'); const api = await server.ssrLoadModule('/src/features/cart/services/commerce.api.ts'); const http = await server.ssrLoadModule('/src/shared/api/http.ts');
+        const session = { userId: 'buyer', email: 'a@example.test', fullName: 'Buyer', roles: ['BUYER'], accessToken: 'one', tokenType: 'Bearer', expiresAt: new Date(Date.now() + 60000).toISOString() };
+        const product = { id: 'catalog-product', sellerId: 'actual-seller', name: 'Catalog name', status: 'ACTIVE', basePrice: 10000 };
+        const cart = { id: 'cart', buyerId: 'buyer', status: 'ACTIVE', subtotal: 10000, itemCount: 1, items: [{ id: 'item', productId: 'catalog-product', sellerId: 'actual-seller', skuId: null, quantity: 1, unitPrice: 10000, lineTotal: 10000 }] };
+        const order = { id: 'order', orderNumber: 'N-1', buyerId: 'buyer', sellerId: 'seller', orderType: 'DIRECT', status: 'PENDING', createdAt: '2026-01-01', totalAmount: 10000, subtotal: 10000, discount: 0, shippingFee: 0, shippingAddress: 'Actual address', receiverName: 'Buyer', receiverPhone: '+84901234567', items: [] };
+        const response = url => url.includes('/cart') ? cart : /orders\?/.test(url) ? { content: [{ ...order, itemCount: 1 }], page: 2, size: 10, totalElements: 21, totalPages: 3, first: false, last: true } : order;
+        for (const bad of [null, {}, { ...cart, items: null }, { ...cart, items: [{}] }]) assert.throws(() => api.adaptCart(bad), /không hợp lệ/);
+        assert.throws(() => api.adaptOrder({ ...order, items: [{}] }), /không hợp lệ/); assert.throws(() => api.adaptOrderPage({ content: null }), /không hợp lệ/);
+        let last; let calls = []; globalThis.fetch = async (url, options) => { last = { url, options }; calls.push(last); return Response.json(response(url)); };
+        assert.throws(() => api.getCart(), e => e.status === 401); assert.equal(calls.length, 0);
+        auth.saveSession({ ...session, roles: ['SELLER'] }, false); assert.throws(() => api.addCartProduct(product), e => e.status === 403); assert.equal(calls.length, 0);
+        auth.saveSession(session, false); await api.addCartProduct(product); assert.ok(last.url.endsWith('/buyer/commerce/cart/items')); assert.equal(last.options.method, 'POST'); assert.equal(last.options.headers.Authorization, 'Bearer one'); assert.equal(last.options.headers['content-type'], 'application/json');
+        assert.deepEqual(JSON.parse(last.options.body), { productId: product.id, sellerId: product.sellerId, productName: product.name, unitPrice: product.basePrice, quantity: 1 });
+        assert.throws(() => api.addCartProduct({ ...product, status: 'INACTIVE' }), e => e.status === 422);
+        await api.updateCartItem('item/one', 3); assert.ok(last.url.endsWith('/cart/items/item%2Fone')); assert.equal(last.options.method, 'PUT'); assert.deepEqual(JSON.parse(last.options.body), { quantity: 3 });
+        assert.throws(() => api.updateCartItem('item', 0), e => e.status === 422);
+        globalThis.fetch = async (url, options) => { last = { url, options }; return new Response(null, { status: 204 }); }; assert.equal(await api.removeCartItem('item'), undefined); assert.equal(last.options.method, 'DELETE');
+        const input = { receiverName: 'Real buyer', receiverPhone: '+84901234567', shippingAddress: 'User supplied address', paymentMethod: 'COD' }; assert.equal(api.checkoutValidation(input), null); assert.ok(api.checkoutValidation({ ...input, shippingAddress: '' })); assert.ok(api.checkoutValidation({ ...input, receiverPhone: 'abc' }));
+        globalThis.fetch = async (url, options) => { last = { url, options }; calls.push(last); return Response.json(response(url)); };
+        await api.checkout(input); assert.ok(last.url.endsWith('/checkout')); assert.deepEqual(JSON.parse(last.options.body), input);
+        await api.listOrders(2); const query = new URL(last.url).searchParams; assert.equal(query.get('page'), '2'); assert.equal(query.get('size'), '10'); assert.equal(query.get('sort'), 'createdAt,desc');
+        await api.getOrder('order/id'); assert.ok(last.url.endsWith('/orders/order%2Fid')); await api.cancelOrder('order/id'); assert.ok(last.url.endsWith('/orders/order%2Fid/cancel')); assert.equal(last.options.method, 'POST');
+        assert.ok(calls.every(call => !/payments/.test(call.url)));
+        globalThis.fetch = async () => Response.json({ message: 'validation failed', details: [{ field: 'quantity', message: 'invalid' }] }, { status: 422 }); await assert.rejects(http.apiRequest('/test', { method: 'POST' }), e => e.status === 422 && e.details[0].field === 'quantity');
+        globalThis.fetch = async () => new Response('invalid JSON'); await assert.rejects(http.apiGet('/test'), /không hợp lệ/);
+        const controller = new AbortController(); controller.abort(); await assert.rejects(api.getCart(controller.signal), e => e.name === 'AbortError');
+        let resolve; globalThis.fetch = () => new Promise(done => { resolve = done; }); const delayed = http.apiGet('/test'); auth.saveSession({ ...session, accessToken: 'two', userId: 'other' }, false); resolve(Response.json({ secret: true })); await assert.rejects(delayed, e => e.status === 401); assert.equal(auth.getSession().accessToken, 'two');
+        let rejectResponse; globalThis.fetch = () => new Promise(done => { rejectResponse = done; }); const old = http.apiGet('/test'); auth.saveSession({ ...session, accessToken: 'three' }, false); rejectResponse(Response.json({}, { status: 401 })); await assert.rejects(old, e => e.status === 401); assert.equal(auth.getSession().accessToken, 'three');
+        globalThis.fetch = async () => Response.json({}, { status: 403 }); await assert.rejects(api.getCart(), e => e.status === 403);
+        globalThis.fetch = async () => { throw new TypeError('offline'); }; await assert.rejects(api.checkout(input), e => e.status === 0);
+    } finally { globalThis.fetch = previous; for (const [key, descriptor] of descriptors) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } await server.close(); }
+});
