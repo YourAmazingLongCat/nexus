@@ -1,5 +1,4 @@
 import CheckoutConfirmation from '../components/CheckoutConfirmation';
-import { Link } from 'react-router-dom';
 import AuctionWinBanner from '../components/AuctionWinBanner';
 import CartEmptyState from '../components/CartEmptyState';
 import CartItemRow from '../components/CartItemRow';
@@ -9,16 +8,16 @@ import PaymentMethods from '../components/PaymentMethods';
 import ShippingAddressCard from '../components/ShippingAddressCard';
 import ShippingOptions from '../components/ShippingOptions';
 import { useCart } from '../hooks/useCart';
-import { cartSessionCode, deliveryAddress, paymentMethods, shippingMethods } from '../mocks/cart.mock';
+import { paymentMethods, shippingMethods } from '../mocks/cart.mock';
 
 /** Buyer cart page: presentation only; state and actions live in useCart. */
 export default function CartPage() {
   const {
-    items, shippingId, setShippingId, paymentId, setPaymentId,
+    items, loading, loadError, deliveryAddress, cartSessionCode, shippingId, setShippingId, paymentId, setPaymentId,
     voucherInput, setVoucherInput, voucher, hasAuctionItems, totals, itemCount,
     shippingLabel, handleQuantityChange, handleRemove, handleSaveForLater,
     handleApplyVoucher, handleClearVoucher, handleChangeAddress, handleSupport,
-    handleCheckout, checkoutOpen, cancelCheckout, confirmCheckout,
+    handleCheckout, handleRetry, checkoutOpen, cancelCheckout, confirmCheckout,
   } = useCart();
 
   return (
@@ -28,20 +27,16 @@ export default function CartPage() {
         onCancel={cancelCheckout} onConfirm={confirmCheckout}
       />
       <div className="nx-container">
-        <p className="alert alert-info" role="note">DEMO checkout: creates a local demo order only. No payment is collected. Address and payment choices below are sample UI.</p>
-        {/* Breadcrumb + flow progress */}
+        <p className="alert alert-info" role="note">Đơn hàng được gửi tới máy chủ. Hiện hỗ trợ COD; thanh toán trực tuyến và lựa chọn giao vận chưa được hỗ trợ. Tổng cuối cùng do máy chủ xác nhận.</p>
+        {/* Flow progress */}
         <div className="nx-cart-topbar">
-          <nav className="nx-cart-breadcrumb" aria-label="Breadcrumb">
-            <Link to="/">Trang chủ</Link>
-            <i className="bi bi-chevron-right" aria-hidden="true"></i>
-            <span>Giỏ hàng &amp; Thanh toán</span>
-          </nav>
+
           <CartStepper current={1} />
         </div>
 
         {hasAuctionItems && <AuctionWinBanner />}
 
-        {items.length === 0 ? (
+        {loading ? <p role="status">Đang tải giỏ hàng...</p> : loadError ? <p role="alert">{loadError}</p> : items.length === 0 ? (
           <CartEmptyState />
         ) : (
           <div className="nx-cart-layout">
@@ -72,6 +67,7 @@ export default function CartPage() {
                       onQuantityChange={handleQuantityChange}
                       onRemove={handleRemove}
                       onSaveForLater={handleSaveForLater}
+                      onRetry={handleRetry}
                     />
                   ))}
                 </div>

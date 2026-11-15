@@ -1,5 +1,10 @@
-﻿import type { Category } from '../types/category';
-
-// Category fixtures removed. Populate through a separately requested data integration.
-// No Backend requests are made by this service yet.
-export const categories: Category[] = [];
+import { useEffect, useState } from 'react';
+import { flattenCategories, getCatalogCategories, type CatalogCategory } from '../../product/services/catalog.api';
+import { apiErrorMessage } from '../../../services/api/client';
+import { notify } from '../../../shared/components/Toast';
+export function useCategories() {
+ const [categories, setCategories] = useState<CatalogCategory[]>([]);
+ useEffect(() => { const controller = new AbortController();
+ getCatalogCategories(controller.signal).then(tree => setCategories(flattenCategories(tree))).catch(error => { if (!controller.signal.aborted) notify.error(apiErrorMessage(error)); });
+ return () => controller.abort(); }, []); return categories;
+}

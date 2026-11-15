@@ -1,4 +1,4 @@
-import { listingMediaSlots } from '../mocks/createListing.mock';
+
 import type { CreateListingState } from '../hooks/useCreateListing';
 
 function shortWarranty(value: string) {
@@ -9,7 +9,7 @@ function shortWarranty(value: string) {
 // Aside 2 — Mô phỏng thẻ sản phẩm như người mua nhìn thấy trên sàn.
 export default function ListingPreviewCard({ hub }: { hub: CreateListingState }) {
   const { draft } = hub;
-  const cover = listingMediaSlots[0];
+  const cover = hub.media[0];
   const hasOffer = hub.saleModes.includes('offer');
 
   return (
@@ -19,7 +19,7 @@ export default function ListingPreviewCard({ hub }: { hub: CreateListingState })
           <i className="bi bi-eye" aria-hidden="true" />
           Xem trước hiển thị
         </h3>
-        <span className="nx-listing-aside-note">Live Card Preview</span>
+        <span className="nx-listing-aside-note">Chỉ xem trước — chưa lưu</span>
       </header>
       <p className="nx-listing-aside-desc">
         Đây là cách người mua nhìn thấy tin đăng của bạn trên sàn:
@@ -27,7 +27,7 @@ export default function ListingPreviewCard({ hub }: { hub: CreateListingState })
 
       <article className="nx-listing-preview">
         <div className="nx-listing-preview-media">
-          <img src={cover.image} alt="Ảnh xem trước sản phẩm" />
+          <img src={cover?.image} alt="Ảnh xem trước sản phẩm" />
           <div className="nx-listing-preview-badges">
             <span className="nx-listing-preview-tag is-blue">Like New 99%</span>
             {hub.discountPercent > 0 && (
@@ -40,9 +40,9 @@ export default function ListingPreviewCard({ hub }: { hub: CreateListingState })
           <div className="nx-listing-preview-footer">
             <span className="nx-listing-preview-verified">
               <i className="bi bi-patch-check-fill" aria-hidden="true" />
-              Seri đã xác minh
+              Chưa xác minh seri
             </span>
-            <span className="nx-listing-preview-city">Hà Nội</span>
+            <span className="nx-listing-preview-city">—</span>
           </div>
         </div>
         <div className="nx-listing-preview-body">

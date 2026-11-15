@@ -8,7 +8,7 @@ export function validateListing(draft: ListingDraftForm, category: string, saleM
     if (!Number.isFinite(draft.price) || draft.price <= 0) next.push('Giá niêm yết phải là số dương.');
     if (!Number.isInteger(draft.quantity) || draft.quantity <= 0 || draft.quantity > 99) next.push('Số lượng phải là số nguyên từ 1 đến 99.');
     if (!saleModes.length) next.push('Chọn ít nhất một phương thức bán.');
-    if (saleModes.includes('auction')) next.push('Đấu giá chưa hỗ trợ trong bản demo. Bỏ chọn đấu giá để đăng bán.');
+    if (saleModes.includes('auction')) next.push('Đấu giá chưa hỗ trợ trong màn hình này. Bỏ chọn đấu giá để đăng bán.');
     if (saleModes.includes('fixed') && (!Number.isFinite(draft.dealPrice) || draft.dealPrice <= 0 || draft.dealPrice > draft.price)) next.push('Giá ưu đãi phải lớn hơn 0 và không vượt giá niêm yết.');
     if (saleModes.includes('offer') && (!Number.isFinite(draft.minOffer) || draft.minOffer <= 0 || draft.minOffer > (saleModes.includes('fixed') ? draft.dealPrice : draft.price))) next.push('Ngưỡng trả giá phải lớn hơn 0 và không vượt giá bán.');
 

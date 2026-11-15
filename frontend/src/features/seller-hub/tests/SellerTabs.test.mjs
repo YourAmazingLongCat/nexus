@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-test('seller tabs render auctions, orders, reports and empty states from updated fixtures', async () => {
+test('seller tabs render auctions, orders, reports and honest unavailable states', async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
   try {
     const fixtures = await server.ssrLoadModule('/src/features/seller-hub/mocks/sellerHub.mock.ts');
@@ -24,9 +24,11 @@ test('seller tabs render auctions, orders, reports and empty states from updated
     assert.match(orderHtml([]), /Không có đơn hàng ở trạng thái này/);
     const { default: ReportsTab } = await server.ssrLoadModule('/src/features/seller-hub/components/ReportsTab.tsx');
     const reports = renderToStaticMarkup(createElement(ReportsTab, { hub: { reportRange: '6m', setReportRange: noop, mockAction: noop } }));
+    assert.match(reports, /Chưa có API/);
     assert.match(reports, /Điểm đánh giá shop/);
     assert.match(reports, /Điểm đánh giá shop/);
-    assert.match(reports, /Điểm đánh giá shop/);
-    assert.equal((reports.match(/class="nx-seller-chart-col"/g) || []).length, fixtures.sellerRevenueSeries.length);
+    assert.equal((reports.match(/class="nx-seller-chart-col"/g) || []).length, 6);
+    assert.match(reports,/height:0%/);
+    assert.match(reports,/Chưa có API báo cáo sản phẩm bán chạy/);
   } finally { await server.close(); }
 });

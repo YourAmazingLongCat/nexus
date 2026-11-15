@@ -1,3 +1,4 @@
+import ListingDescriptionEditor from './ListingDescriptionEditor';
 import { listingConditions } from '../mocks/createListing.mock';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
@@ -95,37 +96,12 @@ export default function ListingCondition({ hub }: { hub: CreateListingState }) {
           <label htmlFor="listing-description" className="nx-listing-label">Mô tả chi tiết sản phẩm</label>
           <span className="nx-listing-optional">Tối thiểu 100 từ</span>
         </div>
-        <div className="nx-listing-editor">
-          <div className="nx-listing-toolbar">
-            <button type="button" title="Bold" onClick={() => hub.mockAction('Định dạng Bold')}>
-              <i className="bi bi-type-bold" aria-hidden="true" />
-            </button>
-            <button type="button" title="Italic" onClick={() => hub.mockAction('Định dạng Italic')}>
-              <i className="bi bi-type-italic" aria-hidden="true" />
-            </button>
-            <button type="button" title="List" onClick={() => hub.mockAction('Danh sách chấm')}>
-              <i className="bi bi-list-ul" aria-hidden="true" />
-            </button>
-            <button type="button" title="Numbered" onClick={() => hub.mockAction('Danh sách số')}>
-              <i className="bi bi-list-ol" aria-hidden="true" />
-            </button>
-            <span className="nx-listing-toolbar-divider" />
-            <button type="button" title="Insert Table" onClick={() => hub.mockAction('Chèn bảng')}>
-              <i className="bi bi-table" aria-hidden="true" />
-            </button>
-            <button type="button" title="Attach Document" onClick={() => hub.mockAction('Đính kèm tài liệu')}>
-              <i className="bi bi-paperclip" aria-hidden="true" />
-            </button>
-            <span className="nx-listing-toolbar-note">Hỗ trợ Markdown</span>
-          </div>
-          <textarea
-            id="listing-description"
-            rows={5}
-            value={draft.description}
-            placeholder="Cung cấp thông tin lịch sử sử dụng, bảo quản trong tủ chống ẩm, lý do bán (lên đời máy), tình trạng cảm biến không tì vết..."
-            onChange={event => hub.updateDraft('description', event.target.value)}
-          />
-        </div>
+        <ListingDescriptionEditor
+          id="listing-description"
+          value={draft.description}
+          placeholder="Cung cấp thông tin lịch sử sử dụng, bảo quản trong tủ chống ẩm, lý do bán (lên đời máy), tình trạng cảm biến không tì vết..."
+          onChange={html => hub.updateDraft('description', html)}
+        />
       </div>
     </div>
   );

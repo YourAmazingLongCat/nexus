@@ -11,7 +11,7 @@ export type OrderFilterId = 'all' | 'shipping' | 'completed' | 'cancelled';
 
 export type BidStatus = 'outbid' | 'leading' | 'lost' | 'won';
 
-export type OrderState = 'shipping' | 'completed';
+export type OrderState = 'pending' | 'confirmed' | 'shipping' | 'completed' | 'cancelled';
 
 export interface BuyerProfile {
   name: string;
@@ -22,11 +22,11 @@ export interface BuyerProfile {
   memberId: string;
   /** Already formatted ("4.9/5") because the design fixes the precision. */
   rating: string;
-  reviewCount: number;
+  reviewCount: number | null;
   winPaymentRate: string;
   joinedAt: string;
-  walletBalance: number;
-  voucherCount: number;
+  walletBalance: number | null;
+  voucherCount: number | null;
 }
 
 export interface BuyerKpiPill {

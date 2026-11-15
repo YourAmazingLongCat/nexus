@@ -19,13 +19,6 @@
 .nx-listing-glow.is-top { top: -128px; right: 25%; width: 384px; height: 384px; background: rgba(220, 225, 255, .2); }
 .nx-listing-glow.is-left { top: 384px; left: 40px; width: 320px; height: 320px; background: rgba(255, 218, 215, .15); }
 
-/* Breadcrumb */
-.nx-listing-crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; font-size: 12px; line-height: 16px; color: var(--on-surface-variant); margin-bottom: 1rem; }
-.nx-listing-crumb { display: inline-flex; align-items: center; gap: .5rem; }
-.nx-listing-crumb a { transition: color .2s; }
-.nx-listing-crumb a:hover { color: var(--primary); }
-.nx-listing-crumb i { font-size: 14px; color: var(--outline); }
-.nx-listing-crumbs strong { font-size: 13px; line-height: 16px; font-weight: 600; color: var(--on-surface); }
 
 /* Page header */
 .nx-listing-header { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
@@ -165,9 +158,13 @@
 .nx-listing-toolbar { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; padding: .5rem; background: var(--surface-container); color: var(--on-surface-variant); }
 .nx-listing-toolbar button { padding: 6px; border-radius: .25rem; display: grid; place-items: center; font-size: 18px; transition: background .2s, color .2s; }
 .nx-listing-toolbar button:hover { background: var(--surface-container-high); color: var(--on-surface); }
-.nx-listing-toolbar-divider { height: 16px; width: 1px; background: var(--outline-variant); margin: 0 4px; }
 .nx-listing-toolbar-note { margin-left: auto; padding-right: .5rem; font-size: 11px; line-height: 14px; color: var(--on-surface-variant); }
-.nx-listing-editor textarea { display: block; width: 100%; min-height: 128px; padding: 12px 1rem; background: transparent; border: 0; outline: none; resize: vertical; font-size: 14px; line-height: 20px; color: var(--on-surface); }
+.nx-listing-editor-content { display: block; width: 100%; min-height: 128px; padding: 12px 1rem; background: transparent; border: 0; outline: none; resize: vertical; overflow: auto; font-size: 14px; line-height: 20px; color: var(--on-surface); }
+
+.nx-listing-toolbar button[aria-pressed="true"] { background: var(--surface-container-high); color: var(--on-surface); }
+.nx-listing-toolbar button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.nx-listing-editor-content[data-empty="true"]::before { content: attr(data-placeholder); color: var(--on-surface-variant); pointer-events: none; float: left; height: 0; }
+
 
 /* Step 4 — pricing */
 .nx-listing-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }

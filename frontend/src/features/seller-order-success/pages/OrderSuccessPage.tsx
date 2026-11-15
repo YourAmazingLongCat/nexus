@@ -1,50 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { useDemoStore, demoActions } from '../../../shared/demo/demoStore';
+import { sellerApi, messageOf, isUuid, nextOrderStatus, createShipment, updateShipment } from '../../seller-hub/services/seller.api';
+import type { Order, Shipment } from '../../seller-hub/services/seller.api';
 import { notify } from '../../../shared/components/Toast';
 import OrderCard from '../components/OrderCard';
 import '../styles/order-success.css';
-
-const statusLabels = { placed: 'Đã đặt', packing: 'Đang đóng gói', fulfilled: 'Đã hoàn tất' };
-const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-
-export default function OrderSuccessPage() {
-  const [params] = useSearchParams();
-  const { orders } = useDemoStore();
-  const order = orders.find(row => row.id === params.get('orderId'));
-  const [checkedOrderId, setCheckedOrderId] = useState('');
-  const checked = Boolean(order && checkedOrderId === order.id);
-  const transition = (status: 'packing' | 'fulfilled') => {
-    if (!order) return;
-    if (status === 'packing' && !checked) { notify.warning('Vui lòng xác nhận kiểm tra hàng trước khi đóng gói.'); return; }
-    if (!demoActions.updateOrderStatus(order.id, status)) { notify.warning('Không thể cập nhật đơn DEMO. Vui lòng kiểm tra trạng thái mới nhất.'); return; }
-    notify.success(status === 'packing' ? 'Đã cập nhật đóng gói cho đơn DEMO.' : 'Đơn DEMO đã hoàn tất.');
-  };
-  return <main className="nx-success-page"><div className="nx-container">
-    <nav className="nx-success-topbar" aria-label="Điều hướng đơn hàng"><Link to="/seller-hub">← Seller Hub</Link><span className="nx-success-status">DEMO • Không có giao dịch thật</span></nav>
-    {!order ? <section className="nx-success-hero"><div className="nx-success-hero-inner"><div className="nx-success-hero-text">
-      <h1>Không tìm thấy đơn DEMO</h1><p>{params.get('orderId') ? 'Đơn này không tồn tại hoặc đã bị xóa khỏi dữ liệu demo.' : 'Chọn một đơn từ Seller Hub để xem chi tiết.'}</p>
-      <Link className="nx-success-btn is-primary" to="/seller-hub">Về Seller Hub</Link>
-    </div></div></section> : <>
-      <section className="nx-success-hero"><div className="nx-success-hero-inner">
-        <div className="nx-success-hero-copy"><span className="nx-success-hero-icon" aria-hidden="true"><i className="bi bi-box-seam" /></span><div className="nx-success-hero-text">
-          <div className="nx-success-hero-meta"><span className="nx-success-hero-type">Đơn hàng DEMO</span><span className="nx-success-hero-code">{order.id}</span></div>
-          <h1>{statusLabels[order.status]}</h1><p className="nx-success-hero-buyer">Đặt lúc {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
-          <p className="nx-success-hero-escrow">Chỉ mô phỏng trên thiết bị này. Không thanh toán, ký quỹ hay giao hàng thật.</p>
-        </div></div>
-        <div className="nx-success-hero-actions">
-          {order.status === 'placed' && <button type="button" className="nx-success-btn is-primary" onClick={() => transition('packing')}>Xác nhận đóng gói DEMO</button>}
-          {order.status === 'packing' && <button type="button" className="nx-success-btn is-primary" onClick={() => transition('fulfilled')}>Hoàn tất đơn DEMO</button>}
-          {order.status === 'fulfilled' && <span className="nx-success-btn is-packed">Đơn DEMO đã hoàn tất</span>}
-        </div>
-      </div></section>
-      <section className="nx-success-ribbon"><div className="nx-success-money"><span className="nx-success-money-label">Tổng đơn DEMO</span><strong className="nx-success-money-value is-net">{money(order.total)}</strong><span className="nx-success-money-note">Không phải khoản tiền đã thu</span></div></section>
-      <div className="nx-success-layout"><div className="nx-success-main"><OrderCard icon="bi-bag-check" title="Sản phẩm trong đơn">
-        {order.items.map((item, index) => <div key={`${item.productId}-${index}`} className="nx-success-demo-item">
-          <img src={item.image} alt={item.title} width="80" height="80" /><div><strong>{item.title}</strong><p>{item.quantity} × {money(item.price)}</p><p>{money(item.price * item.quantity)}</p></div>
-        </div>)}
-      </OrderCard><OrderCard icon="bi-truck" title="Vận chuyển DEMO"><p>Chưa tạo vận đơn. Không có mã AWB, địa chỉ người mua hoặc nhãn vận chuyển thật trong bản demo.</p><button type="button" className="nx-success-btn" onClick={() => notify.info('Bản demo chưa hỗ trợ tạo hoặc in vận đơn thật.')}>Thông tin vận đơn</button></OrderCard></div>
-      <aside className="nx-success-aside"><OrderCard icon="bi-shield-check" title="Kiểm tra đóng gói"><label className="nx-success-check"><input type="checkbox" checked={checked || order.status !== 'placed'} disabled={order.status !== 'placed'} onChange={event => setCheckedOrderId(event.target.checked ? order.id : '')} /><span><strong>Đã kiểm tra sản phẩm và đóng gói (DEMO)</strong><em>Chỉ cập nhật trạng thái mô phỏng, không gọi hãng vận chuyển.</em></span></label></OrderCard></aside></div>
-    </>}
-  </div></main>;
+const labels:Record<string,string>={PENDING:'Chờ xác nhận',CONFIRMED:'Đã xác nhận',SHIPPING:'Đang giao',COMPLETED:'Hoàn tất',CANCELLED:'Đã hủy'};
+const actions:Record<string,string>={PENDING:'Xác nhận đơn',CONFIRMED:'Chuyển sang đang giao',SHIPPING:'Hoàn tất đơn'};
+const money=(n:number)=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(n);
+export default function OrderSuccessPage(){
+ const [shipment,setShipment]=useState<Shipment|null>(null);
+ const [params]=useSearchParams();const id=params.get('orderId')??'';
+ const [order,setOrder]=useState<Order|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState('');const [checked,setChecked]=useState(false);const [busy,setBusy]=useState(false);const lock=useRef(false);
+ useEffect(()=>{const c=new AbortController();setOrder(null);setShipment(null);setChecked(false);setError('');if(!isUuid(id)){setError('Chọn một đơn hàng hợp lệ từ Seller Hub.');setLoading(false);return;}setLoading(true);sellerApi.order(id,c.signal).then(setOrder).catch(e=>{if(!c.signal.aborted){setError(messageOf(e));notify.warning(messageOf(e));}}).finally(()=>{if(!c.signal.aborted)setLoading(false);});return()=>c.abort();},[id]);
+ async function transition(cancel=false){if(!order||lock.current)return;if(!cancel&&!checked){notify.warning('Vui lòng kiểm tra hàng và xác nhận trước khi cập nhật.');return;}lock.current=true;setBusy(true);try{setOrder(cancel?await sellerApi.cancelOrder(order.id):await sellerApi.updateOrder(order.id,nextOrderStatus[order.status]));setChecked(false);notify.success('Đã cập nhật trạng thái đơn hàng.');}catch(e){notify.warning(messageOf(e));}finally{lock.current=false;setBusy(false);}}
+ async function shipmentAction(){if(!order||lock.current)return;lock.current=true;setBusy(true);try{if(shipment){const next=shipment.status==='PENDING'?'SHIPPED':shipment.status==='SHIPPED'?'DELIVERED':null;if(next)setShipment(await updateShipment(shipment.id,next));else notify.info('Vận đơn đã hoàn tất.');}else{const trackingNumber=window.prompt('Nhập mã vận đơn thật (tối đa 100 ký tự). Backend chưa có API xem vận đơn đã tạo; chỉ tạo nếu bạn chắc chắn chưa có:');if(trackingNumber===null)return;if(!trackingNumber.trim()||trackingNumber.length>100){notify.warning('Mã vận đơn không hợp lệ.');return;}if(!window.confirm('Tạo vận đơn cho đơn hàng này?'))return;setShipment(await createShipment(order.id,trackingNumber.trim()));}notify.success('Đã lưu vận đơn.');}catch(e){notify.warning(messageOf(e));}finally{lock.current=false;setBusy(false);}}
+ return <main className="nx-success-page"><div className="nx-container">
+ <nav className="nx-success-topbar" aria-label="Điều hướng đơn hàng"><Link to="/seller-hub">← Seller Hub</Link><span className="nx-success-status">Đơn hàng người bán</span></nav>
+ {!order?<section className="nx-success-hero"><div className="nx-success-hero-inner"><div className="nx-success-hero-text"><h1>{loading?'Đang tải đơn hàng…':'Không thể hiển thị đơn hàng'}</h1><p role={error?'alert':'status'}>{error}</p><Link className="nx-success-btn is-primary" to="/seller-hub">Về Seller Hub</Link></div></div></section>:<>
+ <section className="nx-success-hero"><div className="nx-success-hero-inner"><div className="nx-success-hero-copy"><span className="nx-success-hero-icon" aria-hidden="true"><i className="bi bi-box-seam"/></span><div className="nx-success-hero-text"><div className="nx-success-hero-meta"><span className="nx-success-hero-type">Đơn hàng</span><span className="nx-success-hero-code">{order.orderNumber}</span></div><h1>{labels[order.status]??order.status}</h1><p className="nx-success-hero-buyer">Đặt lúc {new Date(order.createdAt).toLocaleString('vi-VN')}</p><p className="nx-success-hero-escrow">Trạng thái đơn hàng không phải xác nhận thanh toán hoặc ký quỹ.</p></div></div><div className="nx-success-hero-actions">{order.status==='COMPLETED'&&<span className="nx-success-btn is-packed">Đơn hàng đã hoàn tất</span>}{nextOrderStatus[order.status]&&<button disabled={busy} type="button" className="nx-success-btn is-primary" onClick={()=>transition()}>{actions[order.status]}</button>}{nextOrderStatus[order.status]&&<button disabled={busy} type="button" className="nx-success-btn" onClick={()=>{if(window.confirm('Hủy đơn hàng này?'))void transition(true);}}>Hủy đơn</button>}</div></div></section>
+ <section className="nx-success-ribbon"><div className="nx-success-money"><span className="nx-success-money-label">Tổng đơn hàng</span><strong className="nx-success-money-value is-net">{money(Number(order.totalAmount))}</strong><span className="nx-success-money-note">Theo dữ liệu đơn hàng</span></div></section>
+ <div className="nx-success-layout"><div className="nx-success-main"><OrderCard icon="bi-bag-check" title="Sản phẩm trong đơn">{order.items?.map(item=><div key={item.id} className="nx-success-demo-item"><img width="80" height="80" alt="Chưa có ảnh trong dữ liệu đơn hàng" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23eeeeee'/%3E%3C/svg%3E"/><div><strong>{item.productNameSnapshot}</strong><p>{item.skuCodeSnapshot??'—'}</p><p>{item.quantity} × {money(Number(item.unitPrice))}</p><p>{money(Number(item.subtotal))}</p></div></div>)}</OrderCard><OrderCard icon="bi-truck" title="Thông tin người nhận"><p>{order.receiverName??'—'} · {order.receiverPhone??'—'}</p><p>{order.shippingAddress??'Chưa có địa chỉ'}</p><p>{shipment?shipment.trackingNumber+' · '+shipment.status:'Backend chưa có API người bán xem vận đơn đã tạo. Không tạo trùng vận đơn.'}</p><button disabled={busy} type="button" className="nx-success-btn" onClick={shipmentAction}>{shipment?'Cập nhật vận đơn':'Tạo vận đơn'}</button></OrderCard></div><aside className="nx-success-aside"><OrderCard icon="bi-shield-check" title="Kiểm tra đóng gói"><label className="nx-success-check"><input type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)}/><span><strong>Đã kiểm tra sản phẩm và đóng gói</strong><em>Cập nhật trạng thái đơn qua API, không gọi hãng vận chuyển.</em></span></label></OrderCard></aside></div>
+ </>}
+ </div></main>;
 }

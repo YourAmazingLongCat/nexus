@@ -1,4 +1,3 @@
-import ListingBreadcrumb from '../components/ListingBreadcrumb';
 import ListingHeader from '../components/ListingHeader';
 import ListingSection from '../components/ListingSection';
 import ListingBasicInfo from '../components/ListingBasicInfo';
@@ -12,7 +11,7 @@ import ListingPreviewCard from '../components/ListingPreviewCard';
 import ListingEarningsCard from '../components/ListingEarningsCard';
 import ListingAuctionCard from '../components/ListingAuctionCard';
 import { useCreateListing } from '../hooks/useCreateListing';
-import { listingWallet } from '../mocks/createListing.mock';
+
 import '../styles/create-listing.css';
 
 export default function CreateListingPage() {
@@ -22,8 +21,7 @@ export default function CreateListingPage() {
     <main className="nx-listing-page">
       <span className="nx-listing-glow is-top" aria-hidden="true" />
       <span className="nx-listing-glow is-left" aria-hidden="true" />
-      <div className="nx-container">
-        <ListingBreadcrumb />
+      <div className="nx-container"><p role="note">Chỉ lưu tên, mô tả, danh mục, giá mua ngay, SKU và tồn kho. Upload ảnh, tình trạng, thương hiệu, vận chuyển, bảo hành và cấu hình trả giá chưa có API lưu.</p>
         <ListingHeader hub={hub} />
         {hub.errors.length > 0 && <div role="alert" className="nx-listing-guide"><ul>{hub.errors.map(error => <li key={error}>{error}</li>)}</ul></div>}
         <div className="nx-listing-layout">
@@ -79,7 +77,7 @@ export default function CreateListingPage() {
           </div>
 
           <aside className="nx-listing-aside">
-            <ListingQualityCard score={listingWallet.score} label={listingWallet.scoreLabel} />
+            <ListingQualityCard score={0} label="Chưa có API đánh giá" />
             <ListingPreviewCard hub={hub} />
             <ListingEarningsCard hub={hub} />
             <ListingAuctionCard hub={hub} />

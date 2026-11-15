@@ -87,7 +87,7 @@ export default function SavedCartTab({
             onClick={onCheckout}
             disabled={!hasSelectedItems || !onCheckout}
           >
-            Chuyển đã chọn vào giỏ DEMO
+            Chuyển đã chọn vào giỏ hàng
           </button>
         </div>
       )}

@@ -10,7 +10,7 @@ interface OrderRowProps {
 }
 
 export default function OrderRow({ order, onTrack, onCancel, onReview, onRebuy }: OrderRowProps) {
-  const isShipping = order.state === 'shipping';
+  const isShipping = order.state !== 'completed';
 
   return (
     <article className="nx-hub-order">

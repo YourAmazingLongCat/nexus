@@ -308,8 +308,6 @@ export const guaranteeItems: GuaranteeItem[] = [
 
 /** Static copy that has no server-side equivalent in the exported design. */
 export const hubCopy = {
-  breadcrumbCurrent: 'Trung tâm Khách hàng (Buyer Hub)',
-  breadcrumbAccount: 'Tài khoản của tôi',
   auctionFilterLabel: 'Lọc theo trạng thái:',
   auctionSearchPlaceholder: 'Tìm tên phiên...',
   ordersSummary: '3 đơn hàng trong 30 ngày qua',

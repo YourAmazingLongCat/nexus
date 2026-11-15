@@ -38,7 +38,7 @@ export default function BuyerProfileCard({ profile, onCreateAuction }: BuyerProf
             <span className="nx-hub-profile-rating">
               <i className="bi bi-star-fill" aria-hidden="true"></i>
               <strong>{profile.rating}</strong>
-              <span className="nx-hub-muted">{formatReviewCount(profile.reviewCount)}</span>
+              <span className="nx-hub-muted">{profile.reviewCount === null ? "Chưa có dữ liệu" : formatReviewCount(profile.reviewCount)}</span>
             </span>
             <span className="nx-hub-profile-sep" aria-hidden="true">
               •
@@ -58,12 +58,12 @@ export default function BuyerProfileCard({ profile, onCreateAuction }: BuyerProf
         <div className="nx-hub-wallet">
           <div className="nx-hub-wallet-cell">
             <p className="nx-hub-wallet-label">Số dư Ví Nexus</p>
-            <p className="nx-hub-wallet-value">{formatVnd(profile.walletBalance)}</p>
+            <p className="nx-hub-wallet-value">{profile.walletBalance === null ? "Chưa hỗ trợ" : formatVnd(profile.walletBalance)}</p>
           </div>
           <span className="nx-hub-wallet-divider" aria-hidden="true"></span>
           <div className="nx-hub-wallet-cell">
             <p className="nx-hub-wallet-label">Voucher khả dụng</p>
-            <p className="nx-hub-wallet-voucher">{profile.voucherCount} mã giảm giá</p>
+            <p className="nx-hub-wallet-voucher">{profile.voucherCount === null ? "Chưa hỗ trợ" : `${profile.voucherCount} mã giảm giá`}</p>
           </div>
         </div>
 

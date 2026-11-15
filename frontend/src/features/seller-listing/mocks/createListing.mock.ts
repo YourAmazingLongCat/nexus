@@ -15,12 +15,6 @@ import photo4 from '../../../assets/images/seller-inventory/product-4.jpg';
 // TODO(seller-listing): Dữ liệu tĩnh theo ảnh export từ Figma.
 // Chỉ thay bằng REST API khi có Task tích hợp Backend riêng.
 
-export const listingBreadcrumb = [
-  { label: 'Trang chủ', to: '/' },
-  { label: 'Kênh Bán Hàng & Đấu Giá', to: '/seller-hub' },
-  { label: 'Kho Hàng & Sản Phẩm', to: '/seller/products' },
-];
-
 export const listingCategoryPath = [
   'Thiết bị số & Công nghệ',
   'Máy ảnh & Ống kính',

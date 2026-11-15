@@ -20,7 +20,7 @@ function HomePage() {
     <main className="nx-home">
       <div className="nx-flash-bar">
         <b>CYBER SEASON</b> Cơ hội săn linh kiện điện tử với mức giá độc quyền ·
-        Miễn phí vận chuyển cho hội viên hôm nay! <span>Ưu đãi mô phỏng</span>
+        Khám phá danh sách sản phẩm từ người bán. <span>Ưu đãi cần được xác nhận khi đặt hàng</span>
       </div>
       <div className="nx-container">
         <HeroBanner />

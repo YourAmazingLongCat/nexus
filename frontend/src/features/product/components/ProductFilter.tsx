@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { categories } from '../../category/services/categoryService';
-import { useDemoCatalog } from '../services/demoCatalog';
+import { useCategories } from '../../category/services/categoryService';
 interface Props {
   categoryId: string;
   mode: string;
@@ -17,13 +16,7 @@ function ProductFilter({
   setBudget,
   onReset,
 }: Props) {
-  const products = useDemoCatalog();
-  const availableCategories = [...categories];
-  for (const product of products) {
-    if (product.categoryId && !availableCategories.some((category) => category.id === product.categoryId)) {
-      availableCategories.push({ id: product.categoryId, name: product.categoryId } as (typeof categories)[number]);
-    }
-  }
+  const availableCategories = useCategories();
   return (
     <aside className="nx-filter-panel">
       <h2>Bộ lọc tìm kiếm</h2>

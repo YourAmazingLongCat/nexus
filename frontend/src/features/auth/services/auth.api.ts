@@ -1,5 +1,5 @@
 import type { LoginInput, LoginResponse, MeResponse, RegisterInput } from '../types/auth';
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const sessionKey = 'nexus.auth.session';
 export class AuthApiError extends Error {
   constructor(public status: number, message: string, public details: { field: string; message: string }[] = []) {
@@ -16,7 +16,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   const body = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
-    if (response.status === 401 && new Headers(options.headers).has('Authorization')) clearSession();
+    if (response.status === 401 && new Headers(options.headers).has('Authorization')) { clearSession(); sessionChanged(); }
     throw new AuthApiError(response.status, body?.message || 'Yêu cầu không thành công. Vui lòng thử lại.', Array.isArray(body?.details) ? body.details : []);
   }
   return body as T;
@@ -58,6 +58,7 @@ function normalizeLogin(value: unknown): LoginResponse | null {
     expiresAt: new Date(Date.now() + response.expiresIn * 1000).toISOString(),
   };
 }
+function sessionChanged() { if (typeof window !== 'undefined') window.dispatchEvent(new Event('nexus:session-changed')); }
 function storage(name: 'localStorage' | 'sessionStorage'): Storage | null {
   try { return globalThis[name]; } catch { return null; }
 }
@@ -91,6 +92,7 @@ export function saveSession(session: LoginResponse, remember: boolean) {
     if (!store) throw new Error('Storage unavailable');
     const { accessToken, tokenType, expiresAt, userId, username, email, fullName, roles } = session;
     store.setItem(sessionKey, JSON.stringify({ accessToken, tokenType, expiresAt, userId, username, email, fullName, roles }));
+    sessionChanged();
   }
   catch { throw new AuthApiError(0, 'Không thể lưu phiên đăng nhập. Vui lòng bật bộ nhớ trình duyệt.'); }
 }
@@ -119,6 +121,6 @@ export async function me(signal?: AbortSignal) {
   return user;
 }
 export async function logout(signal?: AbortSignal) {
-  const session = getSession(); clearSession();
+  const session = getSession(); clearSession(); sessionChanged();
   if (session) await request<void>('/logout', { method: 'POST', signal, headers: { Authorization: 'Bearer ' + session.accessToken } });
 }

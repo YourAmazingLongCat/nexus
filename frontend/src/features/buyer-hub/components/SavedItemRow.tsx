@@ -44,7 +44,7 @@ export default function SavedItemRow({
       <div className="nx-hub-saved-side">
         <button type="button" className="nx-hub-bid-btn nx-hub-bid-btn--plain"
           disabled={item.maxQuantity < 1} onClick={() => onMoveToCart(item.id)}>
-          {item.maxQuantity < 1 ? 'Hết hàng' : 'Chuyển vào giỏ DEMO'}
+          {item.maxQuantity < 1 ? 'Hết hàng' : 'Chuyển vào giỏ hàng'}
         </button>
         <div className="nx-hub-qty" role="group" aria-label={`Số lượng ${item.name}`}>
           <button

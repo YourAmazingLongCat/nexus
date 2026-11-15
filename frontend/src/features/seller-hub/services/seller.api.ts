@@ -1,4 +1,6 @@
-﻿import { apiGet as rawGet, apiRequest as rawRequest } from '../../../shared/api/http';
+﻿import { api } from '../../../services/api/client';
+const rawGet = <T>(path: string, signal?: AbortSignal) => api<T>('/api/v1' + path, { method: 'GET', signal });
+const rawRequest = <T>(path: string, options: RequestInit) => api<T>('/api/v1' + path, options);
 export interface Page<T> { content: T[]; page: number; size: number; totalElements: number; totalPages: number; first: boolean; last: boolean }
 export interface Category { id: string; name: string; status: string; children: Category[] }
 export interface Product { id: string; sellerId: string; name: string; description: string | null; basePrice: number; categoryId: string; categoryName: string; status: string; images: string[] }
@@ -6,7 +8,7 @@ export interface ProductInput { name: string; description: string; basePrice: nu
 export interface Inventory { id: string; skuId: string; productId: string; skuCode: string; skuName: string | null; warehouseId: string; totalQuantity: number; availableQuantity: number; status: string }
 export interface Sku { id: string; productId: string; sellerId: string; skuCode: string; name: string | null; price: number | null }
 export interface SkuInput { productId: string; skuCode: string; name?: string; price?: number; initialTotalQuantity?: number; initialAvailableQuantity?: number }
-export interface OrderItem { id: string; productId: string; skuId: string; productNameSnapshot: string; skuCodeSnapshot: string; quantity: number; unitPrice: number; subtotal: number }
+export interface OrderItem { id: string; productId: string; skuId?: string | null; productNameSnapshot: string; skuCodeSnapshot?: string | null; quantity: number; unitPrice: number; subtotal: number }
 export interface Order { id: string; orderNumber: string; status: string; totalAmount: number; itemCount?: number; createdAt: string; receiverName?: string; receiverPhone?: string; shippingAddress?: string; items?: OrderItem[] }
 const productPath = '/seller/catalog/products';
 const fulfillmentPath = '/seller/fulfillment';
@@ -39,9 +41,9 @@ function money(value: unknown) { return (typeof value === 'number' || typeof val
 function strings(value: Record<string, unknown>, keys: string[]) { return keys.every(k => text(value[k])); }
 function item(value: unknown, kind: string): boolean {
     if (!record(value)) return false;
-    if (kind === 'inventory') return strings(value, ['id', 'skuId', 'productId', 'skuCode', 'warehouseId', 'status']) && (value.skuName === null || text(value.skuName)) && ['totalQuantity', 'availableQuantity'].every(k => Number.isInteger(value[k]) && Number(value[k]) >= 0);
-    if (kind === 'sku') return strings(value, ['id', 'productId', 'sellerId', 'skuCode']) && (value.name === null || text(value.name)) && (value.price === null || money(value.price));
-    if (kind === 'product') return strings(value, ['id', 'sellerId', 'name', 'categoryId', 'categoryName', 'status']) && (value.description === null || text(value.description)) && money(value.basePrice) && Array.isArray(value.images) && value.images.every(text);
+    if (kind === 'inventory') return strings(value, ['id', 'skuId', 'productId', 'skuCode', 'warehouseId', 'status']) && (value.skuName == null || text(value.skuName)) && ['totalQuantity', 'availableQuantity'].every(k => Number.isInteger(value[k]) && Number(value[k]) >= 0);
+    if (kind === 'sku') return strings(value, ['id', 'productId', 'sellerId', 'skuCode']) && (value.name == null || text(value.name)) && (value.price == null || money(value.price));
+    if (kind === 'product') return strings(value, ['id', 'sellerId', 'name', 'categoryId', 'status']) && (value.description == null || text(value.description)) && money(value.basePrice) && Array.isArray(value.images) && value.images.every(text);
     if (kind === 'order') return strings(value, ['id', 'orderNumber', 'status', 'createdAt']) && money(value.totalAmount) && (value.itemCount === undefined || (Number.isInteger(value.itemCount) && Number(value.itemCount) >= 0));
     return false;
 }
@@ -54,10 +56,32 @@ function validate<T>(path: string, value: unknown): T {
         const paged = path.includes('?');
         if (paged) valid = record(value) && Array.isArray(value.content) && value.content.every(v => item(v, kind)) && ['page', 'size', 'totalElements', 'totalPages'].every(k => Number.isInteger(value[k]) && Number(value[k]) >= 0) && typeof value.first === 'boolean' && typeof value.last === 'boolean';
         else valid = item(value, kind);
-        if (valid && kind === 'order' && !paged) { valid = record(value) && Array.isArray(value.items) && value.items.every(v => record(v) && strings(v, ['id', 'productId', 'skuId', 'productNameSnapshot', 'skuCodeSnapshot']) && Number.isInteger(v.quantity) && money(v.unitPrice) && money(v.subtotal)); }
+        if (valid && kind === 'order' && !paged) { valid = record(value) && Array.isArray(value.items) && value.items.every(v => record(v) && strings(v, ['id', 'productId', 'productNameSnapshot']) && Number.isInteger(v.quantity) && money(v.unitPrice) && money(v.subtotal)); }
     }
     if (!valid) throw new Error('Phản hồi API bán hàng không hợp lệ. Vui lòng tải lại.');
     return value as T;
 }
 async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> { return validate<T>(path, await rawGet<unknown>(path, signal)); }
-async function apiRequest<T>(path: string, options: RequestInit): Promise<T> { const result = await rawRequest<unknown>(path, options); return options.method === 'DELETE' ? result as T : validate<T>(path, result); }
+async function apiRequest<T>(path: string, options: RequestInit): Promise<T> { const result = await rawRequest<unknown>(path, options); return options.method === 'DELETE' ? undefined as T : validate<T>(path, result); }
+
+export async function loadSellerInventory(signal?: AbortSignal) {
+ const inventories: Inventory[] = [];
+ for(let page=0;;page++) { const result=await sellerApi.inventories(new URLSearchParams({page:String(page),size:'100'}),signal); inventories.push(...result.content); if(result.last || page+1>=result.totalPages) break; }
+ const products=new Map<string,Product>();
+ await Promise.all([...new Set(inventories.map(i=>i.productId))].map(async id=>{products.set(id,await sellerApi.product(id,signal));}));
+ return {inventories,products};
+}
+export async function loadSellerOrders(signal?: AbortSignal) {
+ const orders:Order[]=[];
+ for(let page=0;;page++){const result=await sellerApi.orders(page,'',signal);orders.push(...result.content);if(result.last || page+1>=result.totalPages)break;}
+ return orders;
+}
+
+export interface Auction {id:string;productId:string;sellerId:string;startingPrice:number;currentPrice:number;startTime:string;endTime:string;status:string;highestBidderId?:string;acceptedBidCount?:number}
+export async function loadSellerAuctions(sellerId:string,signal?:AbortSignal){const rows:Auction[]=[];for(let page=0;;page++){const result=await rawGet<Page<Auction>>('/auction/auctions?page='+page+'&size=100',signal);if(!result||!Array.isArray(result.content))throw new Error('Phản hồi đấu giá không hợp lệ.');rows.push(...result.content.filter(a=>a.sellerId===sellerId));if(result.last||page+1>=result.totalPages)break;}return Promise.all(rows.map(a=>rawGet<Auction>('/auction/auctions/'+encodeURIComponent(a.id),signal)));}
+export const mutateAuction=(id:string|null,data?:unknown)=>rawRequest<Auction>('/seller/auction/auctions'+(id?'/'+encodeURIComponent(id):''),json(id?'PUT':'POST',data));
+export const cancelAuction=(id:string)=>rawRequest<Auction>('/seller/auction/auctions/'+encodeURIComponent(id)+'/cancel',json('POST'));
+
+export interface Shipment {id:string;orderId:string;trackingNumber?:string;status:string}
+export const createShipment=(orderId:string,trackingNumber:string)=>rawRequest<Shipment>('/seller/fulfillment/shipments',json('POST',{orderId,trackingNumber}));
+export const updateShipment=(id:string,status:string)=>rawRequest<Shipment>('/seller/fulfillment/shipments/'+encodeURIComponent(id)+'/status',json('PATCH',{status}));

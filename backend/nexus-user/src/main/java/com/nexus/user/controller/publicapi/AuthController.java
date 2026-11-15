@@ -5,6 +5,8 @@ import com.nexus.user.dto.common.UserResponse;
 import com.nexus.user.dto.publicapi.AuthResponse;
 import com.nexus.user.dto.publicapi.LoginRequest;
 import com.nexus.user.dto.publicapi.RegisterRequest;
+import com.nexus.user.dto.publicapi.SendOtpRequest;
+import com.nexus.user.dto.publicapi.VerifyOtpRequest;
 import com.nexus.user.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,8 +27,10 @@ import java.util.UUID;
 /**
  * API công khai cho tài khoản — {@code /api/v1/auth/**}.
  * <p>
- * {@code register} và {@code login} được {@code SecurityConfig} cho phép {@code permitAll};
- * {@code logout} và {@code me} yêu cầu đã xác thực (mặc định {@code anyRequest().authenticated()}).
+ * {@code register} và {@code login} được {@code SecurityConfig} cho phép
+ * {@code permitAll};
+ * {@code logout} và {@code me} yêu cầu đã xác thực (mặc định
+ * {@code anyRequest().authenticated()}).
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -70,5 +74,20 @@ public class AuthController {
         // KHÔNG nhận userId từ client — luôn lấy từ token (SecurityUtils)
         UUID currentUserId = SecurityUtils.currentUserId();
         return ResponseEntity.ok(authService.getCurrentUser(currentUserId));
+    }
+
+    @PostMapping("/otp/send")
+    @PreAuthorize("permitAll()")
+    @Operation(summary = "Gửi mã OTP đăng nhập qua email (lưu trong Redis)")
+    public ResponseEntity<Void> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        authService.sendLoginOtp(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/otp/verify")
+    @PreAuthorize("permitAll()")
+    @Operation(summary = "Đăng nhập bằng mã OTP (xác thực từ Redis)")
+    public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return ResponseEntity.ok(authService.loginWithOtp(request));
     }
 }

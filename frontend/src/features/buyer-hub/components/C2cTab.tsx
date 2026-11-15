@@ -7,7 +7,7 @@ interface C2cTabProps {
   subtitle: string;
   activeLabel: string;
   formTitle: string;
-  auction: C2cAuction;
+  auction: C2cAuction | null;
   categories: C2cOption[];
   durations: C2cOption[];
   draft: C2cDraft;
@@ -47,12 +47,12 @@ export default function C2cTab({
         <p className="nx-hub-c2c-intro-text">{subtitle}</p>
       </div>
 
-      <C2cAuctionCard
+      {auction ? <C2cAuctionCard
         auction={auction}
         activeLabel={activeLabel}
         onViewBidders={onViewBidders}
         onEndEarly={onEndEarly}
-      />
+      /> : <p className="nx-hub-empty">Backend chưa hỗ trợ phiên C2C dành cho người mua.</p>}
 
       <C2cAuctionForm
         title={formTitle}

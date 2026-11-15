@@ -15,15 +15,8 @@
 .nx-success-glow.is-top { top: -128px; right: 25%; width: 384px; height: 384px; background: rgba(220, 225, 255, .2); }
 .nx-success-glow.is-left { top: 384px; left: 40px; width: 320px; height: 320px; background: rgba(255, 218, 215, .15); }
 
-/* Top bar: breadcrumb + escrow status */
+/* Top bar: order navigation and escrow status */
 .nx-success-topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; background: var(--surface-container-low); border-radius: .5rem; padding: .5rem 1rem; }
-.nx-success-crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; font-size: 12px; line-height: 16px; color: var(--on-surface-variant); }
-.nx-success-crumb { display: inline-flex; align-items: center; gap: .5rem; }
-.nx-success-crumb i { font-size: 16px; color: var(--outline); }
-.nx-success-crumb a { transition: color .2s; }
-.nx-success-crumb a:hover { color: var(--primary); }
-.nx-success-crumb-sep { color: var(--outline-variant); }
-.nx-success-crumb strong { font-size: 13px; line-height: 16px; font-weight: 600; color: var(--on-surface); }
 .nx-success-status { display: inline-flex; align-items: center; gap: .5rem; background: var(--primary-fixed); color: var(--on-primary-fixed); border-radius: 9999px; padding: 4px 12px; font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: .02em; }
 .nx-success-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); animation: nx-success-pulse 2s cubic-bezier(.4, 0, .6, 1) infinite; }
 @keyframes nx-success-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }

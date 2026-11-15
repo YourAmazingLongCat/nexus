@@ -16,7 +16,7 @@ test('seller API uses actual paths, IDs, DTOs, pagination, auth and empty delete
             const product = { id: 'actual-id', sellerId: 'seller', name: 'Camera', description: null, basePrice: 100, categoryId: 'cat', categoryName: 'Category', status: 'ACTIVE', images: [] };
             const inventory = { id: 'inventory-id', skuId: 'sku-id', productId: 'product-id', skuCode: 'CODE', skuName: null, warehouseId: 'warehouse-id', totalQuantity: 0, availableQuantity: 0, status: 'OUT_OF_STOCK' };
             const sku = { id: 'sku-id', productId: 'product-id', sellerId: 'seller', skuCode: 'CODE', name: null, price: null };
-            const order = { id: 'order-id', orderNumber: 'REAL-ORDER', status: 'PENDING', totalAmount: 100, createdAt: new Date().toISOString(), items: [] };
+            const order = { id: 'order-id', orderNumber: 'REAL-ORDER', status: 'PENDING', totalAmount: 100, createdAt: new Date().toISOString(), items: [{ id:'item-id',productId:'product-id',productNameSnapshot:'Camera',quantity:1,unitPrice:100,subtotal:100 }] };
             let body = url.includes('/inventories') ? inventory : url.includes('/skus') ? sku : url.includes('/orders') ? order : product;
             if (url.includes('?')) body = { content: [body], page: 0, size: 10, totalElements: 1, totalPages: 1, first: true, last: true };
             return options.method === 'DELETE' ? new Response(null, { status: 204 }) : Response.json(body);
@@ -42,6 +42,19 @@ test('seller API uses actual paths, IDs, DTOs, pagination, auth and empty delete
         globalThis.fetch = async () => Response.json({ id: 'not-a-product' }); await assert.rejects(api.product('known-id'), /không hợp lệ/);
         for (const status of [403, 404, 409, 422, 500]) { globalThis.fetch = async () => Response.json({ message: 'Rejected by server' }, { status }); await assert.rejects(api.updateInventory('inventory-id', 'DECREASE', 99), e => e.status === status); }
         globalThis.fetch = async () => { throw new Error('offline'); }; await assert.rejects(api.createSku(sku), e => e.status === 0);
-        const abort = new AbortController(); abort.abort(); await assert.rejects(api.orders(0, '', abort.signal), e => e.name === 'AbortError');
+        globalThis.fetch = async (_url, options) => { if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError'); return Response.json({}); }; const abort = new AbortController(); abort.abort(); await assert.rejects(api.orders(0, '', abort.signal), e => e.name === 'AbortError');
     } finally { globalThis.fetch = oldFetch; for (const [key, descriptor] of descriptors) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } await server.close(); }
+});
+
+test('seller auction ownership paging and real shipment mutations',async()=>{
+ const server=await createServer({server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});const old=globalThis.fetch;
+ try{const svc=await server.ssrLoadModule('/src/features/seller-hub/services/seller.api.ts');const calls=[];
+ globalThis.fetch=async(url,options)=>{calls.push({url,options});if(url.includes('/auction/auctions?'))return Response.json({content:[{id:'own',sellerId:'seller',productId:'p'},{id:'other',sellerId:'other',productId:'q'}],last:true,totalPages:1});return Response.json({id:'own',sellerId:'seller',productId:'p',status:'SCHEDULED',acceptedBidCount:2});};
+ const rows=await svc.loadSellerAuctions('seller');assert.equal(rows.length,1);assert.equal(rows[0].id,'own');assert.ok(!calls.some(c=>c.url.endsWith('/other')));
+ await svc.mutateAuction(null,{productId:'p',startingPrice:100});assert.equal(calls.at(-1).options.method,'POST');assert.ok(calls.at(-1).url.endsWith('/seller/auction/auctions'));
+ await svc.mutateAuction('own',{startingPrice:120});assert.equal(calls.at(-1).options.method,'PUT');
+ await svc.cancelAuction('own');assert.ok(calls.at(-1).url.endsWith('/seller/auction/auctions/own/cancel'));
+ await svc.createShipment('order','REAL-AWB');assert.deepEqual(JSON.parse(calls.at(-1).options.body),{orderId:'order',trackingNumber:'REAL-AWB'});assert.ok(calls.at(-1).url.endsWith('/seller/fulfillment/shipments'));
+ await svc.updateShipment('shipment','SHIPPED');assert.equal(calls.at(-1).options.method,'PATCH');assert.deepEqual(JSON.parse(calls.at(-1).options.body),{status:'SHIPPED'});
+ }finally{globalThis.fetch=old;await server.close();}
 });

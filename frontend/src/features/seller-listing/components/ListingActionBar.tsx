@@ -10,7 +10,7 @@ export default function ListingActionBar({ hub }: { hub: CreateListingState }) {
       </p>
       <div className="nx-listing-actionbar-actions">
         <button type="button" onClick={hub.saveDraft}>Lưu Nháp</button>
-        <button type="button" className="is-primary" onClick={hub.submitListing}>
+        <button type="button" className="is-primary" disabled={hub.submitting} onClick={hub.submitListing}>
           Đăng Bán Sản Phẩm
         </button>
       </div>

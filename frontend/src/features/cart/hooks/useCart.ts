@@ -1,131 +1,180 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { demoActions, useDemoStore } from '../../../shared/demo/demoStore';
 import { notify } from '../../../shared/components/Toast';
-import { defaultVoucherCode, shippingMethods, vouchers } from '../mocks/cart.mock';
+import { commerceApi, type CommerceCart } from '../../../services/api/commerce';
+import { buyerApi } from '../../../services/api/buyer';
 import { calculateTotals } from '../services/cart.calculation';
-import { findVoucher } from '../services/cart.voucher';
-import { formatVnd } from '../utils/cart.format';
-import type { CartItem, PaymentMethodId, ShippingMethodId, Voucher } from '../types/cart';
+import { CartMutationQueue } from '../services/cartMutationQueue';
+import type { CartItem, DeliveryAddress, PaymentMethodId, ShippingMethodId, Voucher } from '../types/cart';
 
-/** UI-only cart state. TODO: Replace mock data with REST API when assigned. */
 export function useCart() {
-  const state = useDemoStore();
   const navigate = useNavigate();
+  const [cart, setCart] = useState<CommerceCart | null>(null);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const itemsRef = useRef<CartItem[]>([]);
+  itemsRef.current = items;
+  const queueRef = useRef<CartMutationQueue | null>(null);
+  const preparingCheckout = useRef(false);
+  const [checkoutPreparing, setCheckoutPreparing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [deliveryAddress, setAddress] = useState<DeliveryAddress>({ id: '', receiverName: '', phone: '', line: '', isDefault: false, verified: false });
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const checkoutLock = useRef(false);
-  const items: CartItem[] = state.cart.flatMap(line => {
-    const p = state.products.find(p => p.id === line.productId);
-    return p ? [{id:p.id, name:p.title, image:p.image, unitPrice:p.price, quantity:line.quantity, maxQuantity:p.quantity, mode:'direct' as const, variant:p.condition, sellerName:'DEMO seller'}] : [];
-  });
-  const [shippingId, setShippingId] = useState<ShippingMethodId>('standard');
-  const [paymentId, setPaymentId] = useState<PaymentMethodId>('vnpay');
-  const [voucherInput, setVoucherInput] = useState(defaultVoucherCode);
-  const [voucher, setVoucher] = useState<Voucher | null>(
-    findVoucher(defaultVoucherCode, vouchers) ?? null,
-  );
-
-  const shippingMethod =
-    shippingMethods.find((method) => method.id === shippingId) ??
-    shippingMethods[0];
-
-  const hasAuctionItems = items.some((item) => item.mode === 'auction');
-
-  const totals = useMemo(
-    () => calculateTotals(items, { shippingFee: shippingMethod.fee, voucher }),
-    [items, shippingMethod.fee, voucher],
-  );
-
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const handleQuantityChange = (id: string, quantity: number) => {
-    demoActions.setQuantity(id, quantity);
-  };
-
-  const handleRemove = (id: string) => {
-    demoActions.removeFromCart(id);
-    notify.success('Đã xóa sản phẩm khỏi giỏ hàng.');
-  };
-
-  const handleSaveForLater = (id: string) => {
-    if (!state.saved.includes(id)) demoActions.toggleSaved(id);
-    demoActions.removeFromCart(id);
-    notify.info('Đã chuyển sản phẩm vào danh sách "Lưu lại sau".');
-  };
-
-  const handleApplyVoucher = () => {
-    const code = voucherInput.trim().toUpperCase();
-
-    if (!code) {
-      notify.warning('Vui lòng nhập mã giảm giá.');
-      return;
-    }
-
-    const found = findVoucher(code, vouchers);
-    if (!found) {
-      notify.error('Mã giảm giá không tồn tại hoặc đã hết hạn.');
-      return;
-    }
-
-    if (totals.directSubtotal <= 0) {
-      notify.warning(
-        'Mã này chỉ áp dụng cho sản phẩm Mua trực tiếp, không áp dụng cho hàng đấu giá.',
-      );
-      return;
-    }
-
-    setVoucher(found);
-    notify.success(`Đã áp dụng mã ${found.code}, giảm ${formatVnd(found.discount)}.`);
-  };
-
-  const handleClearVoucher = () => {
+  const mutationLock = useRef(false);
+  const [shippingId] = useState<ShippingMethodId>('standard');
+  const [paymentId, setPaymentId] = useState<PaymentMethodId>('cod');
+  const [voucherInput, setVoucherInput] = useState('');
+  const [voucher, setVoucher] = useState<Voucher | null>(null);
+  const report = (error: unknown) => notify.error(error instanceof Error ? error.message : 'Không thể kết nối máy chủ.');
+  const refresh = async (next?: CommerceCart) => {
+    const data = next ?? await commerceApi.cart();
+    const products = await Promise.all(data.items.map(line => buyerApi.product(line.productId).catch(() => null)));
+    setCart(data);
+    window.dispatchEvent(new Event("nexus:cart-changed"));
+    const queue = queueRef.current;
+    setItems(data.items.map((line, index) => {
+      const snapshot = queue?.getSnapshot(line.id);
+      const busy = snapshot !== undefined && snapshot.syncState !== 'synced';
+      return { id: line.id, name: products[index]?.name ?? line.productId,
+        image: products[index]?.primaryImageUrl ?? '', unitPrice: Number(line.unitPrice),
+        // Items with unsynchronized optimistic changes keep the user's latest quantity.
+        quantity: busy ? snapshot.desiredQuantity : line.quantity,
+        maxQuantity: snapshot?.maxQuantity ?? Number.MAX_SAFE_INTEGER, mode: 'direct' as const, sellerName: line.sellerId,
+        syncState: snapshot?.syncState ?? 'synced', stockState: snapshot?.stockState ?? 'available' };
+    }));
+    queue?.syncFromServer(data.items.map(line => ({ id: line.id, quantity: line.quantity })));
     setVoucher(null);
-    setVoucherInput('');
-    notify.info('Đã bỏ mã giảm giá.');
   };
-
-  const handleChangeAddress = () => {
-    notify.info('Chức năng quản lý địa chỉ sẽ có ở bước tích hợp API.');
+  useEffect(() => {
+    const queue = new CartMutationQueue({
+      updateQuantity: commerceApi.quantity, removeItem: commerceApi.remove, fetchCart: commerceApi.cart,
+      events: {
+        onItemState: (id, snapshot) => setItems(current => current.map(item => item.id !== id
+          || (item.syncState === snapshot.syncState && item.stockState === snapshot.stockState && item.maxQuantity === (snapshot.maxQuantity ?? Number.MAX_SAFE_INTEGER))
+          ? item : { ...item, syncState: snapshot.syncState, stockState: snapshot.stockState, maxQuantity: snapshot.maxQuantity ?? Number.MAX_SAFE_INTEGER })),
+        onConfirmed: setCart,
+        onReconciled: (id, quantity, info) => {
+          setItems(current => quantity === 0 ? current.filter(item => item.id !== id) : current.map(item => item.id === id ? { ...item, quantity } : item));
+          setVoucher(null);
+          if (info.reason === 'missing') notify.warning('Sản phẩm không còn trong giỏ hàng.');
+          else if (info.reason === 'conflict') notify.warning('Giỏ hàng đã thay đổi ở nơi khác. Số lượng đã được cập nhật theo dữ liệu máy chủ.');
+          else if ((info.availableQuantity ?? 1) <= 0) notify.warning('Sản phẩm đã hết hàng.');
+          else notify.warning(`Chỉ còn ${info.availableQuantity ?? quantity} sản phẩm trong kho. Số lượng đã được điều chỉnh về ${quantity}.`);
+        },
+        onError: (_id, message) => notify.error(`Chưa đồng bộ được số lượng: ${message}`),
+        onIdle: () => window.dispatchEvent(new Event('nexus:cart-changed')),
+      },
+    });
+    queueRef.current = queue;
+    return () => { queue.dispose(); queueRef.current = null; };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    Promise.all([commerceApi.cart(), buyerApi.profile()]).then(async ([data, profile]) => {
+      if (!active) return;
+      setAddress({ id: profile.id, receiverName: profile.fullName ?? profile.username, phone: profile.phone ?? '', line: profile.address ?? '', isDefault: true, verified: false });
+      await refresh(data);
+    }).catch(error => { if (active) { setLoadError(error instanceof Error ? error.message : 'Không thể tải giỏ hàng.'); report(error); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const mutate = async (operation: () => Promise<void>) => {
+    if (mutationLock.current || checkoutLock.current) return;
+    mutationLock.current = true;
+    try { await operation(); } catch (error) { report(error); } finally { mutationLock.current = false; }
   };
-
-  const handleSupport = () => {
-    notify.info('Kênh chat trực tuyến sẽ được kết nối ở bước tích hợp.');
-  };
-
-  // Local-only demo order: selected payment UI is never sent or persisted.
-  const handleCheckout = () => {
-    if (!items.length) {
-      notify.warning('Giỏ hàng đang trống.');
-      return;
+  const refreshAfterMutation = async (next?: CommerceCart) => {
+    try { await refresh(next); }
+    catch {
+      notify.warning('Máy chủ đã lưu thay đổi, nhưng chưa thể tải lại giỏ hàng. Vui lòng tải lại trang; không cần gửi lại thao tác.');
+      setLoadError('Thay đổi đã được lưu. Vui lòng tải lại trang để xem giỏ hàng mới nhất.');
     }
-    setCheckoutOpen(true);
   };
-
-  const cancelCheckout = () => setCheckoutOpen(false);
-  const confirmCheckout = () => {
-    if (checkoutLock.current) return;
+  const handleRemove = useCallback((id: string) => {
+    const queue = queueRef.current;
+    if (!queue || checkoutLock.current) return;
+    setItems(current => current.filter(item => item.id !== id));
+    setVoucher(null);
+    queue.remove(id)
+      .then(() => notify.success('Đã xóa sản phẩm khỏi giỏ hàng.'))
+      .catch(async error => { report(error); await refreshAfterMutation(); });
+  }, []);
+  /** Optimistic: the UI changes immediately; the per-item queue syncs the latest value with the Backend. */
+  const handleQuantityChange = useCallback((id: string, quantity: number) => {
+    const queue = queueRef.current;
+    const current = itemsRef.current.find(item => item.id === id);
+    if (!queue || !current || checkoutLock.current) return;
+    if (quantity <= 0) { handleRemove(id); return; }
+    const next = Math.min(Math.trunc(quantity), current.maxQuantity);
+    if (next < Math.trunc(quantity)) notify.warning(`Chỉ còn ${current.maxQuantity} sản phẩm trong kho.`, { toastId: `stock-${id}` });
+    if (next === current.quantity) return;
+    setItems(list => list.map(item => item.id === id ? { ...item, quantity: next, syncState: 'pending' } : item));
+    setVoucher(null);
+    queue.setQuantity(id, next);
+  }, [handleRemove]);
+  const handleRetry = useCallback((id: string) => queueRef.current?.retry(id), []);
+  /** Wait for pending CartItem mutations, then verify the authoritative cart before checkout. */
+  const syncBeforeCheckout = async (): Promise<boolean> => {
+    const queue = queueRef.current;
+    if (!queue) return false;
+    const { ok } = await queue.settle();
+    if (!ok) { notify.warning('Một số thay đổi số lượng chưa được đồng bộ. Hãy thử lại từng sản phẩm hoặc tải lại giỏ hàng trước khi đặt hàng.'); return false; }
+    try {
+      const latest = await commerceApi.cart();
+      const drift = latest.items.length !== queue.size() || latest.items.some(line => queue.getSnapshot(line.id)?.confirmedQuantity !== line.quantity);
+      if (drift) {
+        await refresh(latest);
+        notify.warning('Giỏ hàng đã được cập nhật theo dữ liệu máy chủ. Vui lòng kiểm tra lại trước khi đặt hàng.');
+        return false;
+      }
+      return true;
+    } catch (error) { report(error); return false; }
+  };
+  const handleSaveForLater = (_id: string) => notify.info('Backend chưa hỗ trợ danh sách lưu sau. Sản phẩm vẫn ở trong giỏ hàng.');
+  const setShippingId = (_id: ShippingMethodId) => notify.info('Backend chưa hỗ trợ lựa chọn dịch vụ giao hàng. Phí cuối cùng do máy chủ tính khi đặt đơn.');
+  const totals = useMemo(() => calculateTotals(items, { shippingFee: 0, voucher }), [items, voucher]);
+  const handleApplyVoucher = () => void mutate(async () => {
+    if (!voucherInput.trim()) { notify.warning('Vui lòng nhập mã giảm giá.'); return; }
+    const result = await commerceApi.discount(voucherInput.trim(), Number(cart?.subtotal ?? 0));
+    setVoucher({ code: result.code, discount: Number(result.discountAmount), description: 'Được xác nhận bởi máy chủ', directOnly: true });
+    notify.success('Đã áp dụng mã giảm giá.');
+  });
+  const handleClearVoucher = () => { setVoucher(null); setVoucherInput(''); };
+  const handleChangeAddress = () => {
+    const receiverName = window.prompt('Tên người nhận', deliveryAddress.receiverName);
+    if (receiverName === null) return;
+    const phone = window.prompt('Số điện thoại người nhận', deliveryAddress.phone);
+    if (phone === null) return;
+    const line = window.prompt('Địa chỉ nhận hàng', deliveryAddress.line);
+    if (line === null) return;
+    setAddress(current => ({ ...current, receiverName: receiverName.trim(), phone: phone.trim(), line: line.trim(), verified: false }));
+  };
+  const handleSupport = () => notify.info('Backend chưa hỗ trợ chat trực tuyến.');
+  const handleCheckout = async () => {
+    if (mutationLock.current || checkoutLock.current || preparingCheckout.current) return;
+    if (!items.length) { notify.warning('Giỏ hàng đang trống.'); return; }
+    if (paymentId !== 'cod') { notify.warning('Cổng VNPay, thẻ và MoMo chưa được backend hỗ trợ. Vui lòng chọn COD.'); return; }
+    if (!deliveryAddress.receiverName || !deliveryAddress.phone || !deliveryAddress.line) { notify.warning('Vui lòng nhập đầy đủ thông tin nhận hàng.'); return; }
+    preparingCheckout.current = true; setCheckoutPreparing(true);
+    try { if (await syncBeforeCheckout()) setCheckoutOpen(true); }
+    finally { preparingCheckout.current = false; setCheckoutPreparing(false); }
+  };
+  const cancelCheckout = () => { if (!checkoutLock.current) setCheckoutOpen(false); };
+  const confirmCheckout = async () => {
+    if (checkoutLock.current || mutationLock.current || !checkoutOpen) return;
     checkoutLock.current = true;
     try {
-      const id = demoActions.checkout(totals.total);
-      notify.success('DEMO order ' + id + ' created. No payment was made.');
-      setCheckoutOpen(false);
-      navigate('/buyer-hub');
-    } catch (error) {
-      notify.error(error instanceof Error ? error.message : 'Unable to create demo order.');
-    } finally {
-      checkoutLock.current = false;
-    }
+      if (!(await syncBeforeCheckout())) { setCheckoutOpen(false); return; }
+      const order = await commerceApi.checkout({ receiverName: deliveryAddress.receiverName, receiverPhone: deliveryAddress.phone,
+        shippingAddress: deliveryAddress.line, paymentMethod: 'COD', ...(voucher ? { discountCode: voucher.code } : {}) });
+      notify.success(`Đã tạo đơn ${order.orderNumber}. Thanh toán COD khi nhận hàng.`);
+      window.dispatchEvent(new Event("nexus:cart-changed"));
+      setCheckoutOpen(false); setItems([]); navigate('/buyer-hub');
+    } catch (error) { report(error); } finally { checkoutLock.current = false; }
   };
-
-  const shippingLabel = shippingMethod.freeLabel
-    ? `Miễn phí (${formatVnd(0)})`
-    : formatVnd(shippingMethod.fee);
-
-  return {
-    items, shippingId, setShippingId, paymentId, setPaymentId,
-    voucherInput, setVoucherInput, voucher, hasAuctionItems, totals, itemCount,
-    shippingLabel, handleQuantityChange, handleRemove, handleSaveForLater,
-    handleApplyVoucher, handleClearVoucher, handleChangeAddress, handleSupport,
-    handleCheckout, checkoutOpen, cancelCheckout, confirmCheckout,
-  };
+  return { items, loading, loadError, deliveryAddress, cartSessionCode: cart?.id ?? '—', shippingId, setShippingId, paymentId, setPaymentId,
+    voucherInput, setVoucherInput, voucher, hasAuctionItems: false, totals, itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+    shippingLabel: 'Theo đơn hàng máy chủ', handleQuantityChange, handleRemove, handleSaveForLater, handleApplyVoucher, handleClearVoucher,
+    handleChangeAddress, handleSupport, handleCheckout, handleRetry, checkoutPreparing, checkoutOpen, cancelCheckout, confirmCheckout };
 }

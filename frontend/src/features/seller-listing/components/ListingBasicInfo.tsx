@@ -32,7 +32,7 @@ export default function ListingBasicInfo({ hub }: { hub: CreateListingState }) {
           </span>
         </div>
         <div className="nx-listing-hint-row">
-          <span className="nx-listing-chip nx-listing-chip--seo">Độ chuẩn SEO: 96%</span>
+          <span className="nx-listing-chip nx-listing-chip--seo">SEO: chưa có API chấm điểm</span>
           <span className="nx-listing-hint">
             Bao gồm: Tên máy + Tình trạng + Xuất xứ + Phụ kiện
           </span>
@@ -44,7 +44,7 @@ export default function ListingBasicInfo({ hub }: { hub: CreateListingState }) {
           Danh mục ngành hàng <em>*</em>
         </p>
         <div className="nx-listing-category">
-<select aria-label="Danh mục ngành hàng" value={hub.category} onChange={event => hub.setCategory(event.target.value)}><option value="">Chọn danh mục</option><option value="camera">Máy ảnh & Ống kính</option><option value="electronics">Điện tử & Công nghệ</option><option value="audio">Âm thanh & Tai nghe</option><option value="accessories">Phụ kiện</option></select>
+<select aria-label="Danh mục ngành hàng" value={hub.category} onChange={event => hub.setCategory(event.target.value)}><option value="">Chọn danh mục</option>{hub.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         </div>
       </div>
 

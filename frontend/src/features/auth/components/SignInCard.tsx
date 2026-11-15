@@ -113,7 +113,10 @@ function SignInCard() {
       setPassword('');
       setPhase('ok');
       await wait(reduced ? 0 : 650);
-      if (request.current === id) setPhase('welcome');
+      if (request.current === id) {
+        setPhase('welcome');
+        navigate(role === 'seller' ? '/seller-hub' : '/buyer-hub');
+      }
     } catch (error) {
       if (request.current === id) {
         setPhase('idle');

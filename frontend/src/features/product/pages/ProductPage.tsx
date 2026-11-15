@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { categories } from '../../category/services/categoryService';
-import { useDemoCatalog } from '../services/demoCatalog';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { listCatalogProducts, listAuctions, type Listing } from '../../../services/api/catalog';
+import { apiErrorMessage } from '../../../services/api/client';
+import { notify } from '../../../shared/components/Toast';
 import ProductList from '../components/ProductList';
 import ProductFilter from '../components/ProductFilter';
 import ProductSort from '../components/ProductSort';
@@ -16,9 +17,9 @@ const budgetLabels: Record<string, string> = {
 };
 
 function ProductPage() {
-  const products = useDemoCatalog();
-  const { categoryId = 'all' } = useParams();
+  const { categoryId: routeCategoryId = 'all' } = useParams();
   const [params, setParams] = useSearchParams();
+  const categoryId = routeCategoryId !== 'all' ? routeCategoryId : params.get('categoryId') || 'all';
   const requestedMode = params.get('mode');
   const mode =
     requestedMode === 'auction' || requestedMode === 'buy-now'
@@ -34,61 +35,41 @@ function ProductPage() {
   const [sort, setSort] = useState('featured');
   const [budget, setBudget] = useState('all');
   const [pagination, setPagination] = useState({ key: '', page: 1 });
-  const category = categories.find((item) => item.id === categoryId) ??
-    (products.some((item) => item.categoryId === categoryId) ? { id: categoryId, name: categoryId } : undefined);
-
   function setMode(value: string) {
     const next = new URLSearchParams(params);
-    if (value === 'all') next.delete('mode');
-    else next.set('mode', value);
+    if (value === 'all') next.delete('mode'); else next.set('mode', value);
     setParams(next);
   }
-
   function resetFilters() {
-    const next = new URLSearchParams(params);
-    next.delete('q');
-    next.delete('mode');
-    setParams(next);
-    setSort('featured');
-    setBudget('all');
+    const next = new URLSearchParams(params); next.delete('q'); next.delete('mode');
+    setParams(next); setSort('featured'); setBudget('all');
   }
-
-  const visible = products
-    .filter((product) => {
-      const matchesCategory =
-        categoryId === 'all' || product.categoryId === categoryId;
-      const matchesMode = mode === 'all' || product.mode === mode;
-      const matchesQuery = product.name
-        .toLocaleLowerCase('vi')
-        .includes(query.trim().toLocaleLowerCase('vi'));
-      const matchesBudget =
-        budget === 'all' ||
-        (budget === 'under5'
-          ? product.price < 5000000
-          : budget === '5to20'
-            ? product.price >= 5000000 && product.price <= 20000000
-            : product.price > 20000000);
-      return matchesCategory && matchesMode && matchesQuery && matchesBudget;
-    })
-    .sort((a, b) =>
-      sort === 'price-low'
-        ? a.price - b.price
-        : sort === 'price-high'
-          ? b.price - a.price
-          : sort === 'rating'
-            ? b.rating - a.rating
-            : 0,
-    );
-
-  // Reset pagination whenever the result criteria change, including category navigation.
   const resultKey = JSON.stringify([categoryId, mode, query, budget, sort]);
-  const pageCount = Math.ceil(visible.length / PAGE_SIZE);
-  const page =
-    pagination.key === resultKey
-      ? Math.min(pagination.page, Math.max(pageCount, 1))
-      : 1;
+  const page = pagination.key === resultKey ? pagination.page : 1;
+  const [products, setProducts] = useState<Listing[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageCount, setPageCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController(); setLoading(true); setError(''); setProducts([]); setTotal(0);
+    if (mode === 'auction' && (categoryId !== 'all' || budget !== 'all')) {
+      const message = 'API đấu giá chưa hỗ trợ lọc danh mục hoặc khoảng giá. Bỏ các bộ lọc này để xem phiên đấu giá.';
+      setError(message); notify.error(message); setLoading(false); return () => controller.abort();
+    }
+    const sortValue = sort === 'price-low' ? 'basePrice,asc' : sort === 'price-high' ? 'basePrice,desc' : 'createdAt,desc';
+    const request = mode === 'auction' ? listAuctions(new URLSearchParams({ status: 'ACTIVE', keyword: query.trim(), page: String(page - 1), size: String(PAGE_SIZE), sort: sort === 'price-low' ? 'currentPrice,asc' : sort === 'price-high' ? 'currentPrice,desc' : 'endTime,asc' }), controller.signal)
+      : listCatalogProducts({ keyword: query.trim(), categoryId: categoryId === 'all' ? undefined : categoryId, status: 'ACTIVE', page: page - 1, size: PAGE_SIZE, sort: sortValue,
+       minPrice: budget === '5to20' ? 5000000 : budget === 'over20' ? 20000001 : undefined,
+       maxPrice: budget === 'under5' ? 4999999 : budget === '5to20' ? 20000000 : undefined }, controller.signal);
+    request.then(result => { setProducts(result.content); setTotal(result.totalElements); setPageCount(result.totalPages); }).catch(error => { if (!controller.signal.aborted) { setError(apiErrorMessage(error)); notify.error(apiErrorMessage(error)); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [categoryId, mode, query, budget, sort, page, retry]);
   const start = (page - 1) * PAGE_SIZE;
-  const pageProducts = visible.slice(start, start + PAGE_SIZE);
+  const pageProducts = products;
+  const selectSort = (value: string) => { if (value === 'rating') { notify.error('API chưa hỗ trợ sắp xếp theo đánh giá.'); return; } setSort(value); };
+
   const activeFilters = [
     ...(query ? [{ label: `Tìm: ${query}`, clear: () => setQuery('') }] : []),
     ...(mode !== 'all'
@@ -104,25 +85,17 @@ function ProductPage() {
       : []),
   ];
 
-  if (categoryId !== 'all' && !category) {
-    return (
-      <main className="nx-container nx-empty">
-        <h1>Không tìm thấy danh mục</h1>
-        <Link to="/categories/all">Xem tất cả danh mục →</Link>
-      </main>
-    );
-  }
 
   return (
     <main className="nx-container nx-category-page nx-product-results">
       <div className="nx-results-toolbar">
         <p role="status">
-          {visible.length ? (
+          {total ? (
             <>
               <strong>
-                {start + 1}–{Math.min(start + PAGE_SIZE, visible.length)}
+                {start + 1}–{Math.min(start + PAGE_SIZE, total)}
               </strong>{' '}
-              trong <strong>{visible.length}</strong> kết quả
+              trong <strong>{total}</strong> kết quả
             </>
           ) : (
             '0 kết quả'
@@ -134,7 +107,7 @@ function ProductPage() {
             </>
           )}
         </p>
-        <ProductSort sort={sort} setSort={setSort} />
+        <ProductSort sort={sort} setSort={selectSort} />
       </div>
       <div className="nx-category-layout">
         <ProductFilter
@@ -179,11 +152,10 @@ function ProductPage() {
           <div className="nx-results-intro">
             <h2 id="product-results-title">Kết quả</h2>
             <p>
-              Giá đấu hiện tại có thể khác giá mua ngay. Xem chi tiết sản phẩm
-              trước khi giao dịch.
+              {mode === 'auction' ? 'Phiên đấu giá đang hoạt động từ máy chủ.' : 'Danh sách sản phẩm mua trực tiếp từ máy chủ. Chọn Đấu giá để xem các phiên đang hoạt động.'}
             </p>
           </div>
-          {visible.length ? (
+          {loading ? <p role="status">Đang tải sản phẩm…</p> : error ? <div className="nx-empty" role="alert"><p>{error}</p><button className="nx-button nx-button-soft" onClick={() => setRetry(value => value + 1)}>Thử lại</button></div> : total ? (
             <>
               <ProductList products={pageProducts} />
               <ProductPagination

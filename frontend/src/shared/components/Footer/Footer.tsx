@@ -1,28 +1,43 @@
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { notify } from '../Toast';
 import './Footer.css';
 
+interface FooterLink { label: string; href: string }
+
 export default function Footer() {
-  const buyLinks = [
+  const navigate = useNavigate();
+  const followLink = (event: ReactMouseEvent<HTMLElement>) => {
+    const link = (event.target as HTMLElement).closest('a');
+    if (!link?.getAttribute('href')?.startsWith('#')) return;
+    event.preventDefault();
+    const destinations: Record<string, string> = { '#register': '/register', '#start-selling': '/seller/products/new', '#seller-hub': '/seller-hub' };
+    const destination = destinations[link.getAttribute('href') ?? ''];
+    if (destination) navigate(destination);
+    else notify.info('Nội dung này chưa được backend cung cấp.');
+  };
+  const buyLinks: FooterLink[] = [
     { label: 'Đăng ký tài khoản', href: '#register' },
     { label: 'Săn khuyến mãi', href: '#promotions' },
     { label: 'Cách tham gia đấu giá', href: '#how-to-bid' },
     { label: 'Hướng dẫn thanh toán', href: '#payment-guide' },
   ];
 
-  const sellLinks = [
+  const sellLinks: FooterLink[] = [
     { label: 'Bắt đầu đăng bán', href: '#start-selling' },
     { label: 'Kênh người bán (Seller Hub)', href: '#seller-hub' },
     { label: 'Chính sách & biểu phí', href: '#seller-policies' },
     { label: 'Cẩm nang nhà bán hàng', href: '#seller-guide' },
   ];
 
-  const aboutLinks = [
+  const aboutLinks: FooterLink[] = [
     { label: 'Giới thiệu công ty', href: '#about-us' },
     { label: 'Tin tức & Sự kiện', href: '#news' },
     { label: 'Cơ hội nghề nghiệp', href: '#careers' },
     { label: 'Chương trình đối tác', href: '#partners' },
   ];
 
-  const policyLinks = [
+  const policyLinks: FooterLink[] = [
     { label: 'Trung tâm trợ giúp 24/7', href: '#help-center' },
     { label: 'Quy chế hoạt động sàn', href: '#terms-of-operation' },
     { label: 'Chính sách bảo mật', href: '#privacy-policy' },
@@ -32,7 +47,7 @@ export default function Footer() {
   const paymentMethods = ['VISA', 'Mastercard', 'MoMo', 'VNPay'];
 
   return (
-    <footer className="nexus-footer">
+    <footer className="nexus-footer" onClick={followLink}>
       <div className="nexus-footer-container">
         {/* 1. NEXUS GUARANTEE TRUST BANNER */}
         <section className="nexus-guarantee-banner" aria-label="Cam kết Nexus Guarantee">

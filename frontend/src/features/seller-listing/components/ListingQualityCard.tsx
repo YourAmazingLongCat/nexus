@@ -22,21 +22,21 @@ export default function ListingQualityCard({ score, label }: { score: number; la
             />
           </svg>
           <div className="nx-listing-gauge-label">
-            <strong>{score}</strong>
+            <strong>—</strong>
             <span>/100</span>
           </div>
         </div>
         <div>
-          <p className="nx-listing-score-title">Khả năng tiếp cận cao</p>
+          <p className="nx-listing-score-title">Chưa có đánh giá từ hệ thống</p>
           <p className="nx-listing-score-caption">
-            Sản phẩm có cơ hội xuất hiện tại trang chủ mục Khám Phá &amp; Top Deals.
+            Chưa có API chấm chất lượng hoặc xác minh tin đăng.
           </p>
         </div>
       </div>
 
       <ul className="nx-listing-checklist">
         {listingQualityItems.map(item => (
-          <li key={item.id} className={item.done ? 'is-done' : 'is-pending'}>
+          <li key={item.id} className={false ? 'is-done' : 'is-pending'}>
             <i
               className={`bi ${item.done ? 'bi-check-circle-fill' : 'bi-hourglass-split'}`}
               aria-hidden="true"

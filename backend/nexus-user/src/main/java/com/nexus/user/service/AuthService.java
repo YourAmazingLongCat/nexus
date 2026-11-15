@@ -3,6 +3,8 @@ package com.nexus.user.service;
 import com.nexus.user.dto.publicapi.AuthResponse;
 import com.nexus.user.dto.publicapi.LoginRequest;
 import com.nexus.user.dto.publicapi.RegisterRequest;
+import com.nexus.user.dto.publicapi.SendOtpRequest;
+import com.nexus.user.dto.publicapi.VerifyOtpRequest;
 import com.nexus.user.dto.common.UserResponse;
 
 import java.util.UUID;
@@ -37,4 +39,7 @@ public interface AuthService {
 
     /** FR-02 — thông tin người dùng đang đăng nhập (đọc từ token, không nhận từ client). */
     UserResponse getCurrentUser(UUID userId);
+    
+    void sendLoginOtp(SendOtpRequest request);
+    AuthResponse loginWithOtp(VerifyOtpRequest request);
 }

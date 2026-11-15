@@ -75,38 +75,6 @@
   color: var(--hub-on-surface-variant);
 }
 
-/* ---------- Breadcrumb ---------- */
-
-.nx-hub-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--hub-on-surface-variant);
-}
-
-.nx-hub-breadcrumb a {
-  color: inherit;
-  transition: color 0.15s ease;
-}
-
-.nx-hub-breadcrumb a:hover {
-  color: var(--hub-primary);
-}
-
-.nx-hub-breadcrumb i {
-  font-size: 16px;
-  color: var(--hub-outline);
-}
-
-.nx-hub-breadcrumb-current {
-  color: var(--hub-on-surface);
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 600;
-}
-
 /* ---------- 1. Profile summary card ---------- */
 
 .nx-hub-profile {

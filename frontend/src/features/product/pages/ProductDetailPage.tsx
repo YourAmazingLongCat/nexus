@@ -1,362 +1,87 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import RichTextContent from '../../../shared/components/RichText/RichTextContent';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { getCatalogProduct, getReviews, getAuction, getBids, placeBid, type CatalogProductDetail, type Auction, type Review, type Bid } from '../../../services/api/catalog';
+import { apiErrorMessage, type PageResponse } from '../../../services/api/client';
+import { notify } from '../../../shared/components/Toast';
 import { formatPrice } from '../services/productService';
-import { useDemoCatalog } from '../services/demoCatalog';
-import type { Product } from '../types/product';
-import { demoActions, useDemoStore } from '../../../shared/demo/demoStore';
-import { categories } from '../../category/services/categoryService';
-import ProductImage from '../components/ProductImage';
+import { CatalogImage } from '../components/CatalogProductCard';
+import AddToCartButton from '../components/AddToCartButton';
 import ProductAssurance from '../components/ProductAssurance';
-import HeartBurstButton from '../../../shared/components/Button/HeartBurstButton';
+import QuantityStepper from '../../../shared/components/QuantityStepper/QuantityStepper';
 import useAddToCartAnimation from '../hooks/useAddToCartAnimation';
+import HeartBurstButton from '../../../shared/components/Button/HeartBurstButton';
 import '../styles/product-detail-animation.css';
-
-// Locally persisted demo listings and cart; bidding remains a UI simulation.
 function ProductDetailPage() {
-  const { productId } = useParams();
-  const products = useDemoCatalog();
-  const product = products.find((p) => p.id === productId);
-  if (!product)
-    return (
-      <main className="nx-container nx-empty">
-        <h1>Không tìm thấy sản phẩm</h1>
-        <Link to="/categories/all">Khám phá sản phẩm →</Link>
-      </main>
-    );
-  return <ProductDetail key={product.id} product={product} />;
+ const { productId } = useParams(); const [params] = useSearchParams(); const auctionId = params.get('auctionId');
+ const [product, setProduct] = useState<CatalogProductDetail | null>(null);
+ const [auction, setAuction] = useState<Auction | null>(null);
+ const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [retry, setRetry] = useState(0);
+ useEffect(() => { const controller = new AbortController(); setLoading(true); setProduct(null); setAuction(null); setError('');
+  if (!productId) { setError('Không tìm thấy sản phẩm.'); setLoading(false); return; }
+  Promise.all([getCatalogProduct(productId, controller.signal), auctionId ? getAuction(auctionId, controller.signal) : Promise.resolve(null)]).then(([item, sale]) => {
+   if (sale && sale.productId !== item.id) throw new Error('Phiên đấu giá không thuộc sản phẩm này.'); setProduct(item); setAuction(sale);
+  }).catch(error => { if (!controller.signal.aborted) { setError(apiErrorMessage(error)); notify.error(apiErrorMessage(error)); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+  return () => controller.abort();
+ }, [productId, auctionId, retry]);
+ if (loading) return <main className="nx-container nx-empty" role="status">Đang tải sản phẩm…</main>;
+ if (error || !product) return <main className="nx-container nx-empty" role="alert"><h1>Không thể tải sản phẩm</h1><p>{error}</p><button className="nx-button nx-button-soft" onClick={() => setRetry(value => value + 1)}>Thử lại</button><Link to="/categories/all">Khám phá sản phẩm →</Link></main>;
+ return <ProductDetail key={product.id + (auction?.id || '')} product={product} initialAuction={auction} />;
 }
-function ProductDetail({ product }: { product: Product }) {
-  const navigate = useNavigate();
-  const store = useDemoStore();
-  const saved = store.saved.includes(product.id);
-  const count = store.cart.reduce((sum, item) => sum + item.quantity, 0);
-  const [quantity, setQuantity] = useState(1);
-  const available = product.quantity ?? 99;
-  const inCart = store.cart.find((item) => item.productId === product.id)?.quantity ?? 0;
-  const remaining = Math.max(0, available - inCart);
-  const [image, setImage] = useState(0),
-    [price, setPrice] = useState(product.price),
-    [bid, setBid] = useState(product.price + 200000),
-    [notice, setNotice] = useState(''),
-    [history, setHistory] = useState<number[]>([]),
-    [reviews, setReviews] = useState(false);
-  const { added, stageRef, imageRef, cartRef, badgeRef, addToCart } =
-    useAddToCartAnimation(() => {
-      setNotice(
-        'Đã thêm sản phẩm vào giỏ demo. Mở giỏ để tiếp tục.',
-      );
-    });
-  const category = categories.find((c) => c.id === product.categoryId);
-  const auction = product.mode === 'auction';
-  const submitBid = () => {
-    if (!Number.isFinite(bid) || bid < price + 200000) {
-      setNotice('Giá đặt phải cao hơn giá hiện tại ít nhất 200.000 ₫.');
-      return;
-    }
-    setPrice(bid);
-    setHistory([bid, ...history]);
-    setBid(bid + 200000);
-    setNotice('Đã ghi nhận giá thầu mô phỏng. Không có giao dịch thật.');
-  };
-  return (
-    <main ref={stageRef} className="nx-container nx-detail-page u051-detail">
-      <div className="nx-detail-actions">
-        {!auction && (
-          <button
-            ref={cartRef}
-            type="button"
-            className="u051-detail-cart"
-            aria-label={`Giỏ mô phỏng, ${count} sản phẩm`}
-            onClick={() => navigate('/cart')}
-          >
-            🛒 Giỏ mô phỏng <b ref={badgeRef}>{count}</b>
-          </button>
-        )}
-        <HeartBurstButton
-          pressed={saved}
-          onToggle={() => demoActions.toggleSaved(product.id)}
-          label={saved ? 'Bỏ lưu vào Watchlist' : 'Lưu vào Watchlist'}
-          text={saved ? 'Đã lưu' : 'Lưu vào Watchlist'}
-          count={142 + (saved ? 1 : 0)}
-        />
-        <button
-          onClick={() => setNotice('Chia sẻ chưa được kết nối trong bản mock.')}
-        >
-          ↗ Chia sẻ
-        </button>
-      </div>
-      <div className="nx-detail-grid">
-        <section className="nx-gallery">
-          <div className="nx-gallery-main">
-            <div className="nx-gallery-badges">
-              <b>{product.badge}</b>
-              <span>◉ Ảnh minh họa</span>
-            </div>
-            <div
-              ref={imageRef}
-              style={{ transform: `scale(${1 + image * 0.035})` }}
-            >
-              <ProductImage
-                kind={product.image}
-                label={`${product.name}, góc ${image + 1}`}
-              />
-            </div>
-            <div className="nx-authenticated">
-              ◉ <strong>Đã kiểm định Nexus Authenticated</strong>
-              <small>
-                Placeholder dùng chung cho các góc ảnh; chưa có ảnh sản phẩm
-                gốc.
-              </small>
-            </div>
-          </div>
-          <div className="nx-thumbnails">
-            {[0, 1, 2, 3].map((n) => (
-              <button
-                key={n}
-                className={image === n ? 'is-active' : ''}
-                onClick={() => setImage(n)}
-                aria-label={`Xem ảnh minh họa ${n + 1}`}
-                aria-pressed={image === n}
-              >
-                <ProductImage
-                  kind={product.image}
-                  label={`Ảnh minh họa ${n + 1}`}
-                />
-              </button>
-            ))}
-          </div>
-          <div className="nx-panel nx-condition">
-            <h3>TÓM TẮT KIỂM ĐỊNH PHẦN CỨNG</h3>
-            <div>
-              ✓ Thân vỏ: 99% hoàn hảo <span>✓ Vòng xoay: Êm mượt</span>
-            </div>
-            <div>
-              ✓ Lá khẩu: Sạch, trơn <span>✓ Ngoại hình: Sẵn sàng</span>
-            </div>
-          </div>
-        </section>
-        <section className="nx-panel nx-purchase">
-          <span className="nx-eyebrow">
-            AIS Serial: 398241 · Mã niêm yết: NX-88204
-          </span>
-          <h1>{product.name}</h1>
-          <p className="nx-muted">
-            Sản phẩm được kiểm định bởi Nexus, sẵn sàng đồng hành cùng bạn.
-            Thông tin và giá trong trang này là dữ liệu mẫu.
-          </p>
-          <div className="nx-seller">
-            <span className="nx-avatar">CH</span>
-            <div>
-              <b>CameraHub VN ◉</b>
-              <small>★ 4.95/5 (642 đánh giá)</small>
-              <small>Người bán uy tín Top Rated</small>
-            </div>
-            <button
-              onClick={() => setNotice('Nhắn tin người bán chưa triển khai.')}
-            >
-              ✉ Nhắn tin
-            </button>
-          </div>
-          <div className="nx-bid-warning">
-            ⚠ Chú ý: Bản mô phỏng UI. Không phát sinh đấu giá hoặc thanh toán
-            thực tế.
-          </div>
-          {auction && (
-            <div className="nx-auction-clock">
-              <strong>● PHIÊN ĐẤU ĐANG DIỄN RA</strong>
-              <span>{product.bids + history.length} lượt đấu</span>
-              <p>THỜI GIAN CÒN LẠI (MẪU)</p>
-              <b>
-                02 <small>giờ</small> : 14 <small>phút</small> : 44{' '}
-                <small>giây</small>
-              </b>
-            </div>
-          )}
-          <div className="nx-detail-price">
-            <div>
-              <small>Giá khởi điểm:</small>
-              <b>{formatPrice(product.originalPrice)}</b>
-            </div>
-            <div>
-              <small>
-                {auction ? 'Giá cao nhất hiện tại:' : 'Giá mua ngay:'}
-              </small>
-              <strong>{formatPrice(price)}</strong>
-              <small>Chưa bao gồm phí vận chuyển</small>
-            </div>
-          </div>
-          {auction && (
-            <>
-              <label className="nx-bid-label" htmlFor="bid-price">
-                Giá thầu của bạn <small>Bước giá: 200.000 ₫</small>
-              </label>
-              <input
-                className="nx-bid-input"
-                id="bid-price"
-                type="number"
-                min={price + 200000}
-                step={200000}
-                value={bid}
-                onChange={(e) => setBid(Number(e.target.value))}
-              />
-              <div className="nx-bid-increments">
-                {[200000, 500000, 1000000].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setBid(Math.max(price, bid) + n)}
-                  >
-                    +{formatPrice(n)}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {!auction && (
-            <label className="nx-bid-label" htmlFor="purchase-quantity">
-              Số lượng (còn {remaining} có thể thêm)
-              <input id="purchase-quantity" type="number" min={1} max={Math.max(1, remaining)} value={quantity}
-                onChange={(event) => setQuantity(Math.max(1, Math.min(remaining, Math.floor(Number(event.target.value)) || 1)))} />
-            </label>
-          )}
-          <button
-            type="button"
-            disabled={!auction && remaining < 1}
-            className="nx-button nx-button-primary nx-purchase-button"
-            onClick={auction ? submitBid : () => {
-              if (demoActions.addToCart(product.id, quantity)) addToCart();
-              else setNotice('Không đủ số lượng. Vui lòng kiểm tra lại giỏ hàng.');
-            }}
-          >
-            {auction
-              ? '♧ Đặt Giá Thầu (Place Bid)'
-              : added
-                ? '✓ Đã thêm vào giỏ'
-                : remaining < 1 ? 'Đã đủ số lượng trong giỏ' : '🛒 Thêm vào giỏ demo'}
-          </button>
-          {auction && <details className="nx-history">
-            <summary>
-              Xem lịch sử đấu giá ({product.bids + history.length} lượt ra giá)
-            </summary>
-            {history.length ? (
-              history.map((n, i) => (
-                <p key={i}>Bạn (mock) · {formatPrice(n)}</p>
-              ))
-            ) : (
-              <p>Chưa có giá thầu mô phỏng trong phiên này.</p>
-            )}
-          </details>}
-          {notice && (
-            <p role="status" className="nx-notice">
-              {notice}
-            </p>
-          )}
-        </section>
-        <ProductAssurance />
-      </div>
-      <div className="nx-detail-bottom">
-        <div>
-          <section className="nx-panel nx-description">
-            <h2>Chi tiết sản phẩm & Đánh giá thợ máy</h2>
-            <h3>{product.name}</h3>
-            {product.description && <p>{product.description}</p>}
-            <p>
-              Thiết kế tinh tế, chất lượng được kiểm tra kỹ lưỡng trước khi niêm
-              yết trên Nexus. Sản phẩm phù hợp với người dùng yêu thích trải
-              nghiệm công nghệ và giá trị bền vững.
-            </p>
-            <p>
-              Thông tin mô tả, tình trạng và đánh giá dưới đây là nội dung mẫu.
-              Chưa có kết nối tới dữ liệu người bán hoặc kết quả kiểm định thực
-              tế.
-            </p>
-            <div className="nx-description-highlights">
-              <div>
-                <h3>◉ Điểm nổi bật</h3>
-                <p>• Ngoại hình đẹp, hoạt động ổn định.</p>
-                <p>• Kiểm tra kỹ trước khi giao hàng.</p>
-                <p>• Đóng gói an toàn theo tiêu chuẩn.</p>
-              </div>
-              <div>
-                <h3>📦 Trong bộ phụ kiện đi kèm</h3>
-                <p>• Sản phẩm và phụ kiện cơ bản.</p>
-                <p>• Phiếu kiểm định mẫu Nexus.</p>
-                <p>• Hộp bảo vệ chống va đập.</p>
-              </div>
-            </div>
-          </section>
-          <section className="nx-panel nx-specs">
-            <h2>Thông số kỹ thuật chi tiết</h2>
-            <table>
-              <tbody>
-                {(product.image === 'lens'
-                  ? [
-                      ['Ngàm ống kính (Mount)', 'Nikon F-mount (AIS)'],
-                      ['Tiêu cự', '50mm (Chuẩn Full-frame)'],
-                      ['Khẩu độ tối đa – tối thiểu', 'f/1.2 – f/16'],
-                      ['Cấu tạo quang học', '7 thấu kính trong 6 nhóm'],
-                      ['Số lá khẩu', '9 lá khẩu cong'],
-                      ['Khoảng cách lấy nét gần nhất', '0.5 mét (1.7 feet)'],
-                      ['Đường kính Filter', '52mm'],
-                    ]
-                  : [
-                      ['Danh mục', category?.name || 'Công nghệ'],
-                      ['Tình trạng', 'Like New 99% (mẫu)'],
-                      ['Bảo hành', '06 tháng (mẫu)'],
-                      ['Thương hiệu', 'Theo thông tin sản phẩm'],
-                      ['Phụ kiện', 'Bộ phụ kiện cơ bản'],
-                    ]
-                ).map(([key, value]) => (
-                  <tr key={key}>
-                    <th>{key}</th>
-                    <td>{value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        </div>
-        <aside className="nx-panel nx-reviews">
-          <div className="nx-section-heading">
-            <h2>Đánh giá từ người mua</h2>
-            <strong>
-              4.9 <small>★★★★★</small>
-            </strong>
-          </div>
-          <p className="nx-muted">Dựa trên 842 giao dịch hoàn tất (mẫu)</p>
-          {[94, 5, 1].map((n, i) => (
-            <div className="nx-rating-bar" key={n}>
-              <span>{5 - i} sao</span>
-              <div>
-                <span style={{ width: `${n}%` }} />
-              </div>
-              <span>{n}%</span>
-            </div>
-          ))}
-          {[
-            'Trần Minh Quân',
-            'Hoàng Nam Designer',
-            ...(reviews ? ['Nguyễn Hà', 'Phạm Anh'] : []),
-          ].map((name, i) => (
-            <article className="nx-review" key={name}>
-              <b>{name}</b>
-              <small>{i + 1} ngày trước</small>
-              <div className="nx-stars">★★★★★</div>
-              <p>
-                Đóng gói cẩn thận, sản phẩm đúng mô tả. Trải nghiệm giao dịch
-                rất tốt! (Đánh giá mẫu)
-              </p>
-            </article>
-          ))}
-          <button
-            className="nx-button nx-button-soft"
-            onClick={() => setReviews(!reviews)}
-          >
-            {reviews ? 'Thu gọn đánh giá' : 'Xem thêm đánh giá mẫu'}
-          </button>
-        </aside>
-      </div>
-    </main>
-  );
+export function ProductDetail({ product, initialAuction = null }: { product: CatalogProductDetail; initialAuction?: Auction | null }) {
+ const navigate = useNavigate(); const [auction, setAuction] = useState(initialAuction);
+ const [quantity, setQuantity] = useState(1); const [image, setImage] = useState(0); const [bid, setBid] = useState(initialAuction?.currentPrice ?? product.basePrice);
+ const bidLock = useRef(false);
+ const [pending, setPending] = useState(false); const [notice, setNotice] = useState('');
+ const { added, stageRef, imageRef, cartRef, badgeRef, addToCart } = useAddToCartAnimation(() => setNotice('Đã thêm sản phẩm vào giỏ hàng.'));
+ const [reviewPage, setReviewPage] = useState(0); const [reviews, setReviews] = useState<PageResponse<Review> | null>(null); const [reviewError, setReviewError] = useState('');
+ const [bidPage, setBidPage] = useState(0); const [bids, setBids] = useState<PageResponse<Bid> | null>(null); const [bidError, setBidError] = useState(''); const [refresh, setRefresh] = useState(0);
+ const [clock, setClock] = useState(() => Date.now());
+ const unsupported = (feature: string) => notify.error(feature + ' chưa được máy chủ hỗ trợ.');
+ const images = product.images.length ? product.images : product.primaryImageUrl ? [product.primaryImageUrl] : [];
+ useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+ useEffect(() => { const controller = new AbortController(); setReviewError(''); setReviews(null);
+  getReviews(product.id, reviewPage, controller.signal).then(setReviews).catch(error => { if (!controller.signal.aborted) { setReviewError(apiErrorMessage(error)); notify.error(apiErrorMessage(error)); } }); return () => controller.abort();
+ }, [product.id, reviewPage]);
+ useEffect(() => { if (!initialAuction) return; const controller = new AbortController(); setBidError(''); setBids(null);
+  getBids(initialAuction.id, bidPage, controller.signal).then(setBids).catch(error => { if (!controller.signal.aborted) { setBidError(apiErrorMessage(error)); notify.error(apiErrorMessage(error)); } }); return () => controller.abort();
+ }, [initialAuction, bidPage, refresh]);
+ async function submitBid() {
+  if (!auction || bidLock.current) return;
+  if (!Number.isFinite(bid) || bid <= auction.currentPrice) { notify.error('Giá đặt phải lớn hơn giá hiện tại.'); return; }
+  bidLock.current = true; setPending(true);
+  try {
+   await placeBid(auction.id, bid);
+   setNotice('Giá thầu đã được máy chủ ghi nhận.'); notify.success('Đặt giá thành công.');
+   setBidPage(0); setRefresh(value => value + 1);
+   try { const updated = await getAuction(auction.id); setAuction(updated); setBid(updated.currentPrice); }
+   catch { const message = 'Giá thầu đã được ghi nhận nhưng tải lại phiên đấu giá thất bại. Vui lòng tải lại trang trước khi đặt tiếp.'; setNotice(message); notify.warning(message); }
+  } catch (error) { setNotice(apiErrorMessage(error)); notify.error(apiErrorMessage(error)); }
+  finally { bidLock.current = false; setPending(false); }
+ }
+ async function share() { try { await navigator.clipboard.writeText(window.location.href); notify.success('Đã sao chép liên kết sản phẩm.'); } catch { notify.error('Không thể sao chép liên kết.'); } }
+ const remaining = auction ? Math.max(0, new Date(auction.endTime).getTime() - clock) : 0;
+ const active = auction?.status === 'ACTIVE' && clock >= new Date(auction.startTime).getTime() && remaining > 0;
+ return <main ref={stageRef} className="nx-container nx-detail-page u051-detail">
+  <div className="nx-detail-actions">{!auction && <button ref={cartRef} type="button" className="u051-detail-cart" onClick={() => navigate('/cart')}>🛒 Giỏ hàng <b ref={badgeRef}>{added ? '✓' : '→'}</b></button>}
+   <HeartBurstButton pressed={false} onToggle={() => unsupported('Watchlist')} label="Lưu vào Watchlist" text="Lưu vào Watchlist" /><button onClick={share}>↗ Chia sẻ</button></div>
+  <div className="nx-detail-grid"><section className="nx-gallery"><div className="nx-gallery-main"><div className="nx-gallery-badges"><b>{auction ? auction.status : product.status}</b><span>Ảnh sản phẩm</span></div>
+   <div ref={imageRef}><CatalogImage url={images[image] ?? null} name={product.name} /></div><div className="nx-authenticated"><strong>Thông tin từ người bán</strong><small>Máy chủ chưa cung cấp kết quả kiểm định.</small></div></div>
+   <div className="nx-thumbnails">{images.map((url, index) => <button key={url + index} className={image === index ? 'is-active' : ''} onClick={() => setImage(index)} aria-label={'Xem ảnh ' + (index + 1)} aria-pressed={image === index}><CatalogImage url={url} name={product.name} /></button>)}</div>
+   <div className="nx-panel nx-condition"><h3>THÔNG TIN KIỂM ĐỊNH</h3><div>Thân vỏ: Chưa có dữ liệu <span>Vòng xoay: Chưa có dữ liệu</span></div><div>Lá khẩu: Chưa có dữ liệu <span>Ngoại hình: Chưa có dữ liệu</span></div></div></section>
+   <section className="nx-panel nx-purchase"><span className="nx-eyebrow">Mã sản phẩm: {product.id}</span><h1>{product.name}</h1><RichTextContent className="nx-muted" value={product.description} fallback="Người bán chưa cung cấp mô tả." />
+    <div className="nx-seller"><span className="nx-avatar">ID</span><div><b>Người bán</b><small>{product.sellerId}</small><small>Chưa có dữ liệu hồ sơ hoặc xếp hạng người bán.</small></div><button onClick={() => unsupported('Nhắn tin')}>✉ Nhắn tin</button></div>
+    <div className="nx-bid-warning">⚠ Thông tin tồn kho, phí vận chuyển và kiểm định chưa có trong dữ liệu catalog. Kiểm tra đơn hàng trước khi xác nhận.</div>
+    {auction && <div className="nx-auction-clock"><strong>{active ? '● PHIÊN ĐẤU ĐANG DIỄN RA' : auction.status}</strong><span>{auction.acceptedBidCount ?? '—'} lượt đấu được chấp nhận</span><p>THỜI GIAN CÒN LẠI</p><b>{Math.floor(remaining / 3600000)} <small>giờ</small> : {Math.floor(remaining / 60000) % 60} <small>phút</small> : {Math.floor(remaining / 1000) % 60} <small>giây</small></b></div>}
+    <div className="nx-detail-price"><div><small>{auction ? 'Giá khởi điểm:' : 'Giá gốc:'}</small><b>{auction ? formatPrice(auction.startingPrice) : '—'}</b></div><div><small>{auction ? 'Giá cao nhất hiện tại:' : 'Giá mua ngay:'}</small><strong>{formatPrice(auction?.currentPrice ?? product.basePrice)}</strong><small>Chưa bao gồm phí vận chuyển</small></div></div>
+    {auction ? <><label className="nx-bid-label" htmlFor="bid-price">Giá thầu của bạn</label><input className="nx-bid-input" id="bid-price" type="number" min={auction.currentPrice} value={bid} onChange={event => setBid(Number(event.target.value))} /><div className="nx-bid-increments">{[10000, 50000, 100000].map(value => <button key={value} onClick={() => setBid(Math.max(bid, auction.currentPrice) + value)}>+{formatPrice(value)}</button>)}</div></> : <div className="nx-bid-label nx-purchase-quantity"><span>Số lượng</span><QuantityStepper value={quantity} label={product.name} onChange={setQuantity} /></div>}
+    {auction ? <button className="nx-button nx-button-primary nx-purchase-button" disabled={pending || !active} onClick={submitBid}>{pending ? 'Đang gửi…' : 'Đặt giá thầu'}</button> : <AddToCartButton product={product} quantity={quantity} onAdded={addToCart} className="nx-button nx-button-primary nx-purchase-button" />}
+    {notice && <p className="nx-notice" role="status">{notice}</p>}
+    {auction && <details className="nx-history"><summary>Lịch sử đặt giá</summary>{bidError ? <p role="alert">{bidError}</p> : !bids ? <p role="status">Đang tải…</p> : <>{bids.content.length ? bids.content.map(item => <p key={item.id}>{item.bidderId}: <b>{formatPrice(item.amount)}</b> · {new Date(item.placedAt).toLocaleString('vi-VN')}</p>) : <p>Chưa có giá thầu.</p>}<button disabled={bidPage === 0} onClick={() => setBidPage(value => value - 1)}>Trước</button><button disabled={bidPage + 1 >= bids.totalPages} onClick={() => setBidPage(value => value + 1)}>Tiếp</button></>}</details>}
+   </section><ProductAssurance /></div>
+  <div className="nx-detail-bottom"><div><section className="nx-panel nx-description"><h2>Mô tả sản phẩm</h2><RichTextContent className="nx-description-content" value={product.description} fallback="Chưa có mô tả." /><div className="nx-description-highlights"><div><h3>Danh mục</h3><p>{product.categoryName || 'Chưa có dữ liệu'}</p></div><div><h3>Phụ kiện và bảo hành</h3><p>Chưa có dữ liệu từ máy chủ.</p></div></div></section>
+   <section className="nx-panel nx-specs"><h2>Thông tin sản phẩm</h2><table><tbody>{[['Danh mục', product.categoryName || '—'], ['Trạng thái', product.status], ['Ngày tạo', new Date(product.createdAt).toLocaleString('vi-VN')], ['Cập nhật', new Date(product.updatedAt).toLocaleString('vi-VN')]].map(([key,value]) => <tr key={key}><th>{key}</th><td>{value}</td></tr>)}</tbody></table></section></div>
+   <aside className="nx-panel nx-reviews"><div className="nx-section-heading"><h2>Đánh giá từ người mua</h2><strong>— <small>Chưa có tổng hợp</small></strong></div><p className="nx-muted">Máy chủ chưa cung cấp điểm trung bình hoặc phân bố đánh giá.</p>{[5, 4, 3].map(score => <div className="nx-rating-bar" key={score}><span>{score} sao</span><div><span style={{ width: '0%' }} /></div><span>—</span></div>)}{reviewError ? <p role="alert">{reviewError}</p> : !reviews ? <p role="status">Đang tải đánh giá…</p> : <><p className="nx-muted">{reviews.totalElements} đánh giá</p>{reviews.content.length ? reviews.content.map(item => <article className="nx-review" key={item.id}><b>{item.buyerId}</b><small>{new Date(item.createdAt).toLocaleString('vi-VN')}</small><div className="nx-stars">{item.score}/5 ★</div><p>{item.comment || 'Không có nhận xét.'}</p></article>) : <p>Chưa có đánh giá.</p>}<button className="nx-button nx-button-soft" disabled={reviewPage === 0} onClick={() => setReviewPage(value => value - 1)}>Trước</button><button className="nx-button nx-button-soft" disabled={reviewPage + 1 >= reviews.totalPages} onClick={() => setReviewPage(value => value + 1)}>Tiếp</button></>}</aside></div>
+ </main>;
 }
-
 export default ProductDetailPage;

@@ -8,7 +8,7 @@ export default function ListingEarningsCard({ hub }: { hub: CreateListingState }
         <h3>Dự tính thực nhận</h3>
         <i className="bi bi-wallet2 nx-listing-aside-icon" aria-hidden="true" />
       </header>
-      <p className="nx-listing-aside-desc">Biểu phí sàn công khai, không chi phí ẩn:</p>
+      <p className="nx-listing-aside-desc">Ước tính minh họa, không phải báo giá hoặc số dư từ hệ thống:</p>
 
       <div className="nx-listing-fees">
         <div className="nx-listing-fee">
@@ -24,15 +24,15 @@ export default function ListingEarningsCard({ hub }: { hub: CreateListingState }
         </div>
         <div className="nx-listing-fee is-muted">
           <span>Bảo hiểm rủi ro Nexus Escrow:</span>
-          <em className="is-primary">Miễn phí (Pro)</em>
+          <em className="is-primary">Chưa có dữ liệu</em>
         </div>
         <div className="nx-listing-fee is-muted">
           <span>Phí đóng gói &amp; seal an toàn:</span>
-          <em className="is-primary">Tài trợ 100%</em>
+          <em className="is-primary">Chưa có dữ liệu</em>
         </div>
         <div className="nx-listing-net">
           <p>
-            <span>Thực nhận vào ví:</span>
+            <span>Ước tính (chưa xác nhận phí):</span>
             <strong>{hub.formatted.netEarnings}</strong>
           </p>
           <p className="nx-listing-net-note">

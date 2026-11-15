@@ -27,7 +27,7 @@ export default function ListingHeader({ hub }: { hub: CreateListingState }) {
           <i className="bi bi-eye" aria-hidden="true" />
           Xem trước niêm yết
         </button>
-        <button type="button" className="nx-listing-btn nx-listing-btn--primary" onClick={hub.submitListing}>
+        <button type="button" className="nx-listing-btn nx-listing-btn--primary" disabled={hub.submitting} onClick={hub.submitListing}>
           <i className="bi bi-rocket-takeoff" aria-hidden="true" />
           Đăng bán ngay
         </button>

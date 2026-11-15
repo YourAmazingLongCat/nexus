@@ -1,5 +1,6 @@
 export type ProductStatus = 'ready' | 'low' | 'auction' | 'available';
 export interface SellerProduct {
+  productId?: string; description?: string; images?: string[];
   id: string;
   name: string;
   sku: string;
@@ -48,8 +49,9 @@ export interface SellerKpi {
 }
 
 /* ----- Phiên đấu giá ----- */
-export type AuctionState = 'live' | 'closing';
+export type AuctionState = 'live' | 'closing' | 'SCHEDULED' | 'ENDED' | 'CANCELLED' | 'SETTLED';
 export interface SellerAuction {
+  backendStatus?: string; productId?: string; startTime?: string; endTime?: string;
   id: string;
   roomCode: string;
   product: string;

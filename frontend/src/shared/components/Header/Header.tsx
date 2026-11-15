@@ -1,22 +1,63 @@
 import { useState, useRef, useEffect } from 'react';
+import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getSession, logout } from '../../../features/auth/services/auth.api';
+import { getSession, logout, me } from '../../../features/auth/services/auth.api';
+import type { LoginResponse } from '../../../features/auth/types/auth';
 import NexusLogo from '../Logo/NexusLogo';
 import { notify } from '../Toast';
-import { useDemoStore } from '../../demo/demoStore';
+import { headerApi, type HeaderCategory, type HeaderNotification } from '../../../services/api/header';
+import { apiErrorMessage } from '../../../services/api/client';
 import './Header.css';
+
+type HeaderCartLine = Awaited<ReturnType<typeof headerApi.cart>>['items'][number];
+interface SubNavItem { label: string; href: string; isHighlight?: boolean }
 
 function Header() {
   const navigate = useNavigate();
-  const demo = useDemoStore();
-  const cartCount = demo.cart.reduce((sum, item) => sum + item.quantity, 0);
-  const [session, setSession] = useState(getSession);
-  async function handleLogout(event) {
+  const [cart, setCart] = useState<HeaderCartLine[]>([]);
+  const [categories, setCategories] = useState<HeaderCategory[]>([]);
+  const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const [session, setSession] = useState<LoginResponse | null>(getSession);
+  async function handleLogout(event: ReactMouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
-    setSession(null);
+    setSession(null); setCart([]); setNotifications([]); setUnreadCount(0);
     try { await logout(); }
     catch { notify.error('Phiên đăng nhập đã được xóa trên thiết bị. Không thể liên hệ máy chủ.'); }
     navigate('/login');
+  }
+  useEffect(() => {
+    let controller: AbortController | undefined;
+    const load = () => {
+      controller?.abort();
+      controller = new AbortController();
+      const signal = controller.signal;
+      const report = (error: unknown) => { if (!signal.aborted) notify.error(apiErrorMessage(error), { toastId: 'header-api-error' }); };
+      const current = getSession(); setSession(current);
+      if (!current) { setCategories([]); setCart([]); setNotifications([]); setUnreadCount(0); return; }
+      const accept = <T,>(callback: (value: T) => void) => (value: T) => { if (!signal.aborted && getSession()?.accessToken === current.accessToken) callback(value); };
+      me(signal).then(accept(profile => setSession(latest => latest ? { ...latest, ...profile } : null))).catch(report);
+      headerApi.categories(signal).then(accept(setCategories)).catch(report);
+      headerApi.notifications(signal).then(accept(page => setNotifications(page.content))).catch(report);
+      headerApi.unreadCount(signal).then(accept(setUnreadCount)).catch(report);
+      if (current.roles.includes('BUYER')) headerApi.cart(signal).then(accept(data => setCart(data.items))).catch(report);
+      else setCart([]);
+    };
+    load();
+    window.addEventListener('nexus:cart-changed', load);
+    window.addEventListener('nexus:session-changed', load);
+    window.addEventListener('storage', load);
+    return () => { controller?.abort(); window.removeEventListener('nexus:cart-changed', load); window.removeEventListener('nexus:session-changed', load); window.removeEventListener('storage', load); };
+  }, []);
+  useEffect(() => {
+    if (!session) return;
+    const timer = window.setTimeout(() => { setSession(getSession()); setCart([]); setNotifications([]); setUnreadCount(0); }, Math.max(0, Date.parse(session.expiresAt) - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [session]);
+  async function markAllRead() {
+    try { await headerApi.readAll(); setUnreadCount(0); setNotifications(items => items.map(item => ({ ...item, read: true }))); }
+    catch (error) { notify.error(apiErrorMessage(error)); }
   }
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Tất cả danh mục');
@@ -28,35 +69,36 @@ function Header() {
   const [showCartPreview, setShowCartPreview] = useState(false);
   const [activeSubnav, setActiveSubnav] = useState('Đồ điện tử & Công nghệ');
 
-  const categoryMenuRef = useRef(null);
-  const categoryFilterRef = useRef(null);
-  const notifMenuRef = useRef(null);
-  const cartPreviewRef = useRef(null);
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
+  const categoryFilterRef = useRef<HTMLDivElement>(null);
+  const notifMenuRef = useRef<HTMLDivElement>(null);
+  const cartPreviewRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
-    function handleClickOutside(event) {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (
         categoryMenuRef.current &&
-        !categoryMenuRef.current.contains(event.target)
+        !categoryMenuRef.current.contains(target)
       ) {
         setShowCategoryMenu(false);
       }
       if (
         categoryFilterRef.current &&
-        !categoryFilterRef.current.contains(event.target)
+        !categoryFilterRef.current.contains(target)
       ) {
         setShowCategoryFilter(false);
       }
       if (
         notifMenuRef.current &&
-        !notifMenuRef.current.contains(event.target)
+        !notifMenuRef.current.contains(target)
       ) {
         setShowNotificationMenu(false);
       }
       if (
         cartPreviewRef.current &&
-        !cartPreviewRef.current.contains(event.target)
+        !cartPreviewRef.current.contains(target)
       ) {
         setShowCartPreview(false);
       }
@@ -65,19 +107,8 @@ function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const categories = [
-    { name: 'Đồ điện tử & Công nghệ', icon: 'bi-laptop' },
-    { name: 'Xe cộ & Phụ tùng', icon: 'bi-car-front' },
-    { name: 'Thời trang & Phụ kiện', icon: 'bi-handbag' },
-    { name: 'Đồ sưu tầm & Nghệ thuật', icon: 'bi-gem' },
-    { name: 'Nhà cửa & Đời sống', icon: 'bi-house-heart' },
-    { name: 'Thể thao & Dã ngoại', icon: 'bi-bicycle' },
-    { name: 'Sức khỏe & Làm đẹp', icon: 'bi-heart-pulse' },
-    { name: 'Đồng hồ & Trang sức', icon: 'bi-watch' },
-    { name: 'Sách & Văn phòng phẩm', icon: 'bi-book' },
-  ];
 
-  const subNavItems = [
+  const subNavItems: SubNavItem[] = [
     { label: 'Đã lưu', href: '#saved' },
     { label: 'Đồ điện tử & Công nghệ', href: '#electronics' },
     { label: 'Xe cộ & Phụ tùng', href: '#vehicles' },
@@ -99,10 +130,12 @@ function Header() {
     'Nha Trang, VN',
   ];
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (searchQuery.trim()) params.set('q', searchQuery.trim());
+    const category = categories.find(item => item.name === selectedCategory);
+    if (category) params.set('categoryId', category.id);
     navigate(`/products${params.size ? `?${params}` : ''}`);
   };
 
@@ -127,16 +160,16 @@ function Header() {
 
             <span className="top-bar-divider">|</span>
 
-            <a href="#deals" className="top-link">
+            <a onClick={(event) => { event.preventDefault(); notify.info('Máy chủ chưa cung cấp danh sách ưu đãi.'); }} href="#deals" className="top-link">
               Deals hot
             </a>
 
-            <a href="#live-auction" className="top-link live-auction-link">
+            <a onClick={(event) => { event.preventDefault(); navigate('/products?mode=auction'); }} href="#live-auction" className="top-link live-auction-link">
               <span className="pulse-live-dot"></span>
               Đấu giá trực tiếp
             </a>
 
-            <a href="#help" className="top-link top-link-hide-mobile">
+            <a onClick={(event) => { event.preventDefault(); notify.info('Chưa có dịch vụ hỗ trợ trực tuyến.'); }} href="#help" className="top-link top-link-hide-mobile">
               Trợ giúp & Hỗ trợ
             </a>
           </div>
@@ -188,7 +221,7 @@ function Header() {
               Kênh Bán Hàng
             </Link>
 
-            <a href="#wishlist" className="top-link top-link-hide-mobile">
+            <a onClick={(event) => { event.preventDefault(); navigate('/buyer-hub?tab=saved'); }} href="#wishlist" className="top-link top-link-hide-mobile">
               Yêu thích
             </a>
 
@@ -206,7 +239,7 @@ function Header() {
                 aria-label="Thông báo"
               >
                 <i className="bi bi-bell" aria-hidden="true"></i>
-                <span className="badge-counter badge-red">3</span>
+                <span className="badge-counter badge-red">{unreadCount}</span>
               </button>
 
               {showNotificationMenu && (
@@ -215,39 +248,21 @@ function Header() {
                     <span className="fw-bold small">Thông báo mới</span>
                     <span
                       className="text-primary small cursor-pointer"
+                      onClick={markAllRead}
                       style={{ cursor: 'pointer' }}
                     >
                       Đã đọc tất cả
                     </span>
                   </div>
                   <div className="p-2">
-                    <div className="p-2 rounded mb-1 bg-light small">
-                      <div className="fw-semibold text-danger">
-                        🔥 Phiên đấu giá Rolex Submariner
-                      </div>
-                      <div className="text-muted">
-                        Bạn đã bị trả giá cao hơn! Đặt giá lại ngay.
-                      </div>
-                      <small className="text-secondary">2 phút trước</small>
-                    </div>
-                    <div className="p-2 rounded mb-1 small">
-                      <div className="fw-semibold text-primary">
-                        📦 Đơn hàng #NX-9821
-                      </div>
-                      <div className="text-muted">
-                        Đang trên đường giao tới bạn tại Hà Nội.
-                      </div>
-                      <small className="text-secondary">1 giờ trước</small>
-                    </div>
-                    <div className="p-2 rounded small">
-                      <div className="fw-semibold text-success">
-                        🎉 Voucher 100k đã vào ví
-                      </div>
-                      <div className="text-muted">
-                        Ưu đãi giảm giá độc quyền thành viên Nexus.
-                      </div>
-                      <small className="text-secondary">Hôm qua</small>
-                    </div>
+                    {notifications.length === 0 && <p className="small text-muted p-2 mb-0">Không có thông báo.</p>}
+                    {notifications.map(item => <div key={item.id} className={`p-2 rounded mb-1 small ${item.read ? '' : 'bg-light'}`} onClick={async () => {
+                      try { const detail = await headerApi.notification(item.id); await headerApi.read(item.id); notify.info(detail.content || detail.title); setNotifications(items => items.map(n => n.id === item.id ? { ...n, read: true } : n)); if (!item.read) setUnreadCount(count => Math.max(0, count - 1)); } catch (error) { notify.error(apiErrorMessage(error)); }
+                    }}>
+                      <div className="fw-semibold text-primary">{item.title}</div>
+                      <div className="text-muted">{item.content || 'Nhấn để xem nội dung thông báo.'}</div>
+                      <small className="text-secondary">{new Date(item.createdAt).toLocaleString('vi-VN')}</small>
+                    </div>)}
                   </div>
                 </div>
               )}
@@ -279,12 +294,12 @@ function Header() {
                     </button>
                   </div>
                   <div className="p-2">
-                    {demo.cart.length === 0 && <p className="small text-muted p-2 mb-0">Giỏ hàng đang trống.</p>}
-                    {demo.cart.slice(0, 4).map((item) => {
-                      const product = demo.products.find((entry) => entry.id === item.productId);
+                    {cart.length === 0 && <p className="small text-muted p-2 mb-0">Giỏ hàng đang trống.</p>}
+                    {cart.slice(0, 4).map((item) => {
+                      const product = { id: item.productId, title: item.productName || item.productId, price: item.unitPrice };
                       if (!product) return null;
                       return (
-                        <Link key={item.productId} to={`/products/${product.id}`} className="d-flex gap-2 align-items-center p-2 border-bottom small text-decoration-none" onClick={() => setShowCartPreview(false)}>
+                        <Link key={item.id} to={`/products/${product.id}`} className="d-flex gap-2 align-items-center p-2 border-bottom small text-decoration-none" onClick={() => setShowCartPreview(false)}>
                           <div className="flex-grow-1">
                             <div className="fw-semibold text-truncate" style={{ maxWidth: '240px' }}>{product.title}</div>
                             <div className="text-primary fw-bold">{new Intl.NumberFormat('vi-VN').format(product.price)} ₫ × {item.quantity}</div>
@@ -347,11 +362,11 @@ function Header() {
                 {categories.map((cat) => (
                   <a
                     key={cat.name}
-                    href={`#${cat.name}`}
+                    href={`/categories/${cat.id}`}
                     className="category-dropdown-item"
-                    onClick={() => setShowCategoryMenu(false)}
+                    onClick={(event) => { event.preventDefault(); setShowCategoryMenu(false); navigate(`/categories/${cat.id}`); }}
                   >
-                    <i className={`bi ${cat.icon}`}></i>
+                    <i className={`bi ${cat.icon || 'bi-grid'}`}></i>
                     <span>{cat.name}</span>
                   </a>
                 ))}
@@ -469,6 +484,11 @@ function Header() {
               onClick={(e) => {
                 e.preventDefault();
                 setActiveSubnav(item.label);
+                const category = categories.find(cat => cat.name === item.label);
+                if (category) navigate('/categories/' + category.id);
+                else if (item.href === '#saved') navigate('/buyer-hub?tab=saved');
+                else if (item.href === '#shock-auctions') navigate('/products?mode=auction');
+                else notify.info('Chưa có danh mục hoặc bộ lọc tương ứng từ máy chủ.');
               }}
             >
               {item.label}

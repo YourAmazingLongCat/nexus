@@ -1,4 +1,4 @@
-﻿import { apiGet, ApiError } from '../../../shared/api/http';
+﻿import { api, ApiError } from '../../../services/api/client';
 export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 export interface CatalogProduct {
   id: string; name: string; basePrice: number; status: ProductStatus;
@@ -33,7 +33,7 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 function text(value: unknown): string { return typeof value === 'string' ? value : invalid(); }
-function nullableText(value: unknown): string | null { return value === null ? null : text(value); }
+function nullableText(value: unknown): string | null { return value == null ? null : text(value); }
 function nonnegativeInteger(value: unknown): number { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : invalid(); }
 // Explicit adapters reject malformed wire data; never synthesize commercial metadata.
 export function adaptProduct(value: unknown): CatalogProduct {
@@ -70,13 +70,13 @@ export function adaptProductPage(value: unknown): CatalogPage<CatalogProduct> {
   };
 }
 export async function listCatalogProducts(query: CatalogQuery, signal?: AbortSignal): Promise<CatalogPage<CatalogProduct>> {
-  return adaptProductPage(await apiGet(`/catalog/products?${catalogQueryString(query)}`, signal));
+  return adaptProductPage(await api(`/api/v1/catalog/products?${catalogQueryString(query)}`, { signal }));
 }
 export async function getCatalogProduct(id: string, signal?: AbortSignal): Promise<CatalogProductDetail> {
-  return adaptProductDetail(await apiGet(`/catalog/products/${encodeURIComponent(id)}`, signal));
+  return adaptProductDetail(await api(`/api/v1/catalog/products/${encodeURIComponent(id)}`, { signal }));
 }
 export async function getCatalogCategories(signal?: AbortSignal): Promise<CatalogCategory[]> {
-  const tree = await apiGet<unknown>('/catalog/categories', signal);
+  const tree = await api<unknown>('/api/v1/catalog/categories', { signal });
   if (!Array.isArray(tree)) return invalid();
   return tree.map(adaptCategory);
 }

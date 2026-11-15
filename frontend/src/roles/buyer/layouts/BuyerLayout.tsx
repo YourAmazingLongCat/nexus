@@ -1,9 +1,8 @@
-import DemoNotice from '../../../shared/demo/DemoNotice';
 import { Outlet } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import Header from '../../../shared/components/Header/Header.jsx';
-import Footer from '../../../shared/components/Footer/Footer.jsx';
+import Header from '../../../shared/components/Header/Header';
+import Footer from '../../../shared/components/Footer/Footer';
 import '../../../shared/styles/variables.css';
 import '../../../shared/styles/global.css';
 import '../../../shared/styles/theme.css';
@@ -16,7 +15,6 @@ function BuyerLayout() {
   return (
     <div className="nx-buyer-layout">
       <Header />
-      <DemoNotice />
       <Outlet />
       <Footer />
     </div>

@@ -1,4 +1,5 @@
 export type CartItemMode = 'direct' | 'auction';
+export type { CartSyncState, CartStockState } from '../services/cartMutationQueue';
 
 export interface CartItem {
   id: string;
@@ -22,6 +23,10 @@ export interface CartItem {
   auctionNote?: string;
   /** Helper text under the price (e.g. "Giá thắng thầu ..."). */
   priceNote?: string;
+  /** Optimistic quantity synchronization state (UI only, never persisted). */
+  syncState?: import('../services/cartMutationQueue').CartSyncState;
+  /** Stock state learned from Backend rejections; stock is not exposed on cart lines. */
+  stockState?: import('../services/cartMutationQueue').CartStockState;
 }
 
 export type ShippingMethodId = 'standard' | 'express';

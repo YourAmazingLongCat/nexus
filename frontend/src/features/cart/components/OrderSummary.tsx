@@ -148,7 +148,7 @@ export default function OrderSummary({
             disabled={!hasItems}
           >
             <i className="bi bi-lock-fill" aria-hidden="true"></i>
-            <span>Create DEMO order — no payment</span>
+            <span>Xác nhận đặt hàng (COD)</span>
           </button>
           <p className="nx-cart-cta-note">
             Nhấn &apos;Xác nhận&apos; đồng nghĩa bạn chấp thuận{' '}
@@ -161,7 +161,7 @@ export default function OrderSummary({
           <div className="nx-cart-trust-item">
             <i className="bi bi-patch-check-fill" aria-hidden="true"></i>
             <p>
-              <strong>Sample policy:</strong> This local demo does not provide real guarantees or refunds.
+              <strong>Lưu ý:</strong> Chính sách bảo hành và hoàn tiền chưa được cung cấp bởi API.
             </p>
           </div>
           <div className="nx-cart-trust-item">
@@ -170,7 +170,7 @@ export default function OrderSummary({
               aria-hidden="true"
             ></i>
             <p>
-              <strong>DEMO only:</strong> No payment details are collected or sent.
+              <strong>Thanh toán COD:</strong> Không thu tiền trực tuyến; thanh toán khi nhận hàng.
             </p>
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function OrderSummary({
           </span>
           <div>
             <p className="nx-cart-help-title">Cần trợ giúp thanh toán?</p>
-            <p className="nx-cart-help-sub">Hotline 24/7: 1900 8899</p>
+            <p className="nx-cart-help-sub">Kênh hỗ trợ trực tuyến chưa được kết nối</p>
           </div>
         </div>
         <button

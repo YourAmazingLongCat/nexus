@@ -5,7 +5,7 @@
 .nx-stock-page input[type='checkbox'] { width: 15px; height: 15px; accent-color: var(--stock-blue); cursor: pointer; vertical-align: middle; }
 .nx-stock-page > .nx-container { display: flex; flex-direction: column; gap: 24px; }
 .nx-stock-context { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 8px 0; border-bottom: 1px solid var(--seller-ui-border); font-size: 10px; color: #77717c; }
-.nx-stock-context nav { display: flex; align-items: center; gap: 12px; }
+.nx-stock-context > p { margin-left: auto; }
 .nx-stock-context p > span { margin: 0 6px; }
 .nx-stock-context strong { color: #514a57; font-weight: 600; }
 .nx-stock-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 0 20px; }
