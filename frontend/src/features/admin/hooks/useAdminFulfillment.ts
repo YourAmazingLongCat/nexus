@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminFulfillmentApi } from '../services/admin.service';
+import { loadAllAdminPages } from '../services/adminPagination';
 import type {
   AdminInventoryItem,
   AdminWarehouse,
@@ -28,17 +29,22 @@ export function useAdminFulfillment() {
   });
 
   // FETCH DATA
+  const requestRevision = useRef(0);
+  const detailRevision = useRef(0);
+
   const loadData = useCallback(async () => {
+    const revision = ++requestRevision.current;
+    const isCurrent = () => revision === requestRevision.current;
     setLoading(true);
     setError(null);
     try {
       if (activeTab === 'inventory') {
-        const warehousePage = await adminFulfillmentApi.listWarehouses({ size: 100 });
+        const warehousePage = await loadAllAdminPages((pagination) => adminFulfillmentApi.listWarehouses({  ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         setWarehouses(warehousePage.content);
-        const res = await adminFulfillmentApi.listInventories({
-          warehouseId: warehouseFilter === 'ALL' ? undefined : warehouseFilter,
-          status: stockStatusFilter === 'ALL' ? undefined : stockStatusFilter,
-        });
+        const res = await loadAllAdminPages((pagination) => adminFulfillmentApi.listInventories({ warehouseId: warehouseFilter === 'ALL' ? undefined : warehouseFilter,
+          status: stockStatusFilter === 'ALL' ? undefined : stockStatusFilter, ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setInventory(res.content);
           setIsUsingRealApi(true);
@@ -46,7 +52,8 @@ export function useAdminFulfillment() {
           setInventory([]);
         }
       } else if (activeTab === 'warehouses') {
-        const res = await adminFulfillmentApi.listWarehouses();
+        const res = await loadAllAdminPages((pagination) => adminFulfillmentApi.listWarehouses({  ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setWarehouses(res.content);
           setIsUsingRealApi(true);
@@ -55,21 +62,24 @@ export function useAdminFulfillment() {
         }
       }
     } catch (error) {
+      if (!isCurrent()) return;
       setError(error instanceof Error ? error.message : 'Không thể tải dữ liệu.');
       setIsUsingRealApi(false);
       if (activeTab === 'inventory') setInventory([]);
       else if (activeTab === 'warehouses') setWarehouses([]);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [activeTab, warehouseFilter, stockStatusFilter]);
 
   useEffect(() => {
     loadData();
+    return () => { requestRevision.current += 1; detailRevision.current += 1; };
   }, [loadData]);
 
   // WAREHOUSE HANDLERS
   const handleOpenCreateWarehouse = () => {
+    detailRevision.current += 1;
     setSelectedWarehouse(null);
     setWarehouseForm({
       name: '',
@@ -80,6 +90,7 @@ export function useAdminFulfillment() {
   };
 
   const handleOpenEditWarehouse = async (wh: AdminWarehouse) => {
+    const revision = ++detailRevision.current;
     setSelectedWarehouse(wh);
     setWarehouseForm({
       name: wh.name,
@@ -89,6 +100,7 @@ export function useAdminFulfillment() {
     setShowWarehouseModal(true);
     try {
       const freshWh = await adminFulfillmentApi.getWarehouse(wh.id);
+      if (revision !== detailRevision.current) return;
       if (freshWh) {
         setSelectedWarehouse(freshWh);
         setWarehouseForm({
@@ -98,6 +110,7 @@ export function useAdminFulfillment() {
         });
       }
     } catch (error) {
+      if (revision !== detailRevision.current) return;
       setError(error instanceof Error ? error.message : 'Không thể tải chi tiết.');
     }
   };

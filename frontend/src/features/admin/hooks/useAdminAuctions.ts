@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminAuctionApi } from '../services/admin.service';
+import { loadAllAdminPages } from '../services/adminPagination';
 import type {
   AdminAuction,
 } from '../types/admin.types';
@@ -13,13 +14,16 @@ export function useAdminAuctions() {
   const [loading, setLoading] = useState(false);
   const [isUsingRealApi, setIsUsingRealApi] = useState(false);
 
+  const requestRevision = useRef(0);
+
   const loadAuctions = useCallback(async () => {
+    const revision = ++requestRevision.current;
+    const isCurrent = () => revision === requestRevision.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await adminAuctionApi.list({
-        status: statusFilter === 'ALL' ? undefined : statusFilter,
-      });
+      const res = await loadAllAdminPages((pagination) => adminAuctionApi.list({ status: statusFilter === 'ALL' ? undefined : statusFilter, ...pagination }), isCurrent);
+        if (!isCurrent()) return;
       if (res && Array.isArray(res.content)) {
         setAuctions(res.content);
         setIsUsingRealApi(true);
@@ -27,16 +31,18 @@ export function useAdminAuctions() {
         setAuctions([]);
       }
     } catch (error) {
+      if (!isCurrent()) return;
       setError(error instanceof Error ? error.message : 'Không thể tải dữ liệu.');
       setIsUsingRealApi(false);
       setAuctions([]);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [statusFilter]);
 
   useEffect(() => {
     loadAuctions();
+    return () => { requestRevision.current += 1; };
   }, [loadAuctions]);
 
   const handleCancelAuction = async (id: string, title?: string) => {

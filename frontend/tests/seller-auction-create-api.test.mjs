@@ -50,7 +50,8 @@ test('create flow has loading, empty, error, duplicate-submit protection and rea
  const base = new URL('../src/features/seller-auction/', import.meta.url);
  assert.deepEqual(await readdir(new URL('services/', base)), ['auctionService.ts']);
  const hook = await readFile(new URL('hooks/useCreateAuction.ts', base), 'utf8');
- assert.match(hook, /lock.current \|\| created/); assert.match(hook, /setCreated\(await createAuction/); assert.doesNotMatch(hook, /saveMock|FileReader|localStorage/);
+ assert.match(hook, /lock.current \|\| created/); assert.match(hook, /const auction = await createAuction\(draft, products\); if \(current\(\)\) setCreated\(auction\)/);
+ assert.match(hook, /const current = \(\) => attempt === revision.current && key === sessionKey\(\)/); assert.doesNotMatch(hook, /saveMock|FileReader|localStorage/);
  const feedback = await readFile(new URL('components/AuctionFeedback.tsx', base), 'utf8');
  assert.match(feedback, /encodeURIComponent\(hub.created.id\)/); assert.match(feedback, /hub.created.status/);
  const productSection = await readFile(new URL('components/AuctionProductSection.tsx', base), 'utf8');

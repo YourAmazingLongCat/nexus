@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminUsersApi } from '../services/admin.service';
+import { loadAllAdminPages } from '../services/adminPagination';
 import type {
   AdminUserDetails,
   UserStatus,
@@ -35,7 +36,12 @@ export function useAdminUsers() {
   };
 
   // Fetch users directly from REST API and enrich details (phone, roles)
+  const requestRevision = useRef(0);
+  const detailRevision = useRef(0);
+
   const fetchUsers = useCallback(async () => {
+    const revision = ++requestRevision.current;
+    const isCurrent = () => revision === requestRevision.current;
     setLoading(true);
     setError(null);
     try {
@@ -44,13 +50,11 @@ export function useAdminUsers() {
 
       // Backend UserRepository.java chỉ lọc LIKE trên email, username, fullName (KHÔNG lọc trên phone).
       // Nếu gửi từ khóa có chứa số (như SĐT) lên backend thì backend sẽ trả về mảng rỗng.
-      // Do đó, khi tìm theo số điện thoại, frontend gọi danh sách đầy đủ (size: 100) và tự lọc trên client.
-      const response = await adminUsersApi.list({
-        keyword: hasDigits ? undefined : (trimmedKeyword || undefined),
+      // Do đó, khi tìm theo số điện thoại, frontend gọi toàn bộ các trang danh sách và tự lọc trên client.
+      const response = await loadAllAdminPages((pagination) => adminUsersApi.list({ keyword: hasDigits ? undefined : (trimmedKeyword || undefined),
         status: statusFilter === 'ALL' ? undefined : (statusFilter as UserStatus),
-        role: roleFilter === 'ALL' ? undefined : roleFilter,
-        size: 100,
-      });
+        role: roleFilter === 'ALL' ? undefined : roleFilter, ...pagination }), isCurrent);
+        if (!isCurrent()) return;
 
       if (response && Array.isArray(response.content)) {
         // Lấy chi tiết để có số điện thoại (phone), vai trò (roles) chính xác từ backend
@@ -66,6 +70,7 @@ export function useAdminUsers() {
                 roles: detail.roles || u.roles || (u.role ? [u.role] : []),
               };
             } catch (error) {
+              if (!isCurrent()) return u;
               setError(error instanceof Error ? error.message : 'Không thể tải chi tiết người dùng.');
               return {
                 ...u,
@@ -75,6 +80,8 @@ export function useAdminUsers() {
             }
           }),
         );
+
+        if (!isCurrent()) return;
 
         // Lọc toàn diện: Tìm theo Số điện thoại (vài số đầu, số bất kỳ, số đầy đủ), họ tên, email, username
         let finalUsers = enrichedList;
@@ -90,17 +97,19 @@ export function useAdminUsers() {
           });
         }
 
+        if (!isCurrent()) return;
         setUsers(finalUsers as DetailedAdminUser[]);
         setIsUsingRealApi(true);
       } else {
         setUsers([]);
       }
     } catch (error) {
+      if (!isCurrent()) return;
       setError(error instanceof Error ? error.message : 'Không thể tải dữ liệu.');
       setIsUsingRealApi(false);
       setUsers([]);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [searchKeyword, statusFilter, roleFilter]);
 
@@ -108,14 +117,19 @@ export function useAdminUsers() {
     const debounceTimer = setTimeout(() => {
       fetchUsers();
     }, 300);
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      clearTimeout(debounceTimer);
+      requestRevision.current += 1; detailRevision.current += 1;
+    };
   }, [fetchUsers]);
 
   // Task U-2: View user details via API
   const handleViewDetails = async (user: DetailedAdminUser) => {
+    const revision = ++detailRevision.current;
     setSelectedUser(user);
     try {
       const freshData = await adminUsersApi.getById(user.id);
+      if (revision !== detailRevision.current) return;
       if (freshData) {
         setSelectedUser({
           ...user,
@@ -126,12 +140,14 @@ export function useAdminUsers() {
         } as DetailedAdminUser);
       }
     } catch (error) {
+      if (revision !== detailRevision.current) return;
       setError(error instanceof Error ? error.message : 'Không thể tải chi tiết.');
     }
   };
 
   // Task U-3: Change status via API
   const handleOpenStatusModal = (user: DetailedAdminUser) => {
+    detailRevision.current += 1;
     setSelectedUser(user);
     setTargetStatus(user.status);
     setShowStatusModal(true);

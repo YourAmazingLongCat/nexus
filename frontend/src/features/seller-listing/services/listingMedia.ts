@@ -20,7 +20,6 @@ export async function persistListingImages(
   upload: (productId: string, file: File) => Promise<string>,
   attach: (images: { imageUrl: string; primary: boolean }[]) => Promise<unknown>,
 ): Promise<void> {
-  if (!media.length) return;
   for (const slot of media) {
     if (!uploaded.has(slot.id)) {
       if (!slot.file) throw new Error('Không tìm thấy file ảnh đã chọn. Vui lòng chọn lại ảnh.');

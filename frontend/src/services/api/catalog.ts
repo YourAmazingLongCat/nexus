@@ -114,12 +114,15 @@ export function adaptApiPage<T>(value: unknown, adapt: (item: unknown) => T): Pa
  if (!Array.isArray(row.content) || typeof row.first !== 'boolean' || typeof row.last !== 'boolean') return invalidContract();
  return { content: row.content.map(adapt), page: integer(row.page), size: integer(row.size), totalElements: integer(row.totalElements), totalPages: integer(row.totalPages), first: row.first, last: row.last };
 }
-export async function listAuctions(query: URLSearchParams, signal?: AbortSignal): Promise<PageResponse<Listing>> {
+export async function listAuctionSummaries(query: URLSearchParams, signal?: AbortSignal): Promise<PageResponse<Auction>> {
  const keyword = query.get('keyword')?.trim();
  if (keyword && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(keyword)) {
    throw new ApiError(400, 'Tìm kiếm đấu giá chỉ hỗ trợ UUID sản phẩm hoặc người bán; chưa hỗ trợ tìm theo tên.');
  }
- const page = adaptApiPage(await api('/api/v1/auction/auctions?' + query, { signal }), adaptAuction);
+ return adaptApiPage(await api('/api/v1/auction/auctions?' + query, { signal }), adaptAuction);
+}
+export async function listAuctions(query: URLSearchParams, signal?: AbortSignal): Promise<PageResponse<Listing>> {
+ const page = await listAuctionSummaries(query, signal);
  const content = await Promise.all(page.content.map(async auction => ({ ...await getCatalogProduct(auction.productId, signal), auction })));
  return { ...page, content };
 }
@@ -127,3 +130,4 @@ export const getAuction = async (id: string, signal?: AbortSignal) => adaptAucti
 export const getBids = async (id: string, page = 0, signal?: AbortSignal) => adaptApiPage(await api('/api/v1/auction/auctions/' + encodeURIComponent(id) + '/bids?page=' + page + '&size=10', { signal }), adaptBid);
 export const getReviews = async (id: string, page = 0, signal?: AbortSignal) => adaptApiPage(await api('/api/v1/catalog/products/' + encodeURIComponent(id) + '/reviews?page=' + page + '&size=10', { signal }), adaptReview);
 export const placeBid = (id: string, amount: number) => api<unknown>('/api/v1/buyer/auction/auctions/' + encodeURIComponent(id) + '/bids', { method: 'POST', body: JSON.stringify({ amount }) }).then(adaptBid);
+

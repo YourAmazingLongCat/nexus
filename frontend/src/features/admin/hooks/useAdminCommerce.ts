@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminCommerceApi } from '../services/admin.service';
+import { loadAllAdminPages } from '../services/adminPagination';
 import type {
   AdminOrder,
   AdminCampaign,
@@ -62,14 +63,18 @@ export function useAdminCommerce() {
   });
 
   // FETCH DATA
+  const requestRevision = useRef(0);
+  const detailRevision = useRef(0);
+
   const loadData = useCallback(async () => {
+    const revision = ++requestRevision.current;
+    const isCurrent = () => revision === requestRevision.current;
     setLoading(true);
     setError(null);
     try {
       if (activeTab === 'orders') {
-        const res = await adminCommerceApi.listOrders({
-          status: orderStatusFilter === 'ALL' ? undefined : (orderStatusFilter as OrderStatus),
-        });
+        const res = await loadAllAdminPages((pagination) => adminCommerceApi.listOrders({ status: orderStatusFilter === 'ALL' ? undefined : (orderStatusFilter as OrderStatus), ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setOrders(res.content as DetailedAdminOrder[]);
           setIsUsingRealApi(true);
@@ -77,9 +82,8 @@ export function useAdminCommerce() {
           setOrders([]);
         }
       } else if (activeTab === 'campaigns') {
-        const res = await adminCommerceApi.listCampaigns({
-          status: campaignStatusFilter === 'ALL' ? undefined : (campaignStatusFilter as CampaignStatus),
-        });
+        const res = await loadAllAdminPages((pagination) => adminCommerceApi.listCampaigns({ status: campaignStatusFilter === 'ALL' ? undefined : (campaignStatusFilter as CampaignStatus), ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setCampaigns(res.content as any);
           setIsUsingRealApi(true);
@@ -88,12 +92,11 @@ export function useAdminCommerce() {
         }
       } else if (activeTab === 'coupons') {
         const [couponRes, campRes] = await Promise.allSettled([
-          adminCommerceApi.listDiscountCodes({
-            status: couponStatusFilter === 'ALL' ? undefined : couponStatusFilter,
-            campaignId: couponCampaignFilter === 'ALL' ? undefined : couponCampaignFilter,
-          }),
-          adminCommerceApi.listCampaigns({ size: 100 }),
+          loadAllAdminPages((pagination) => adminCommerceApi.listDiscountCodes({ status: couponStatusFilter === 'ALL' ? undefined : couponStatusFilter,
+            campaignId: couponCampaignFilter === 'ALL' ? undefined : couponCampaignFilter, ...pagination }), isCurrent),
+          loadAllAdminPages((pagination) => adminCommerceApi.listCampaigns({  ...pagination }), isCurrent),
         ]);
+        if (!isCurrent()) return;
         if (couponRes.status === 'rejected') throw couponRes.reason;
         if (campRes.status === 'rejected') throw campRes.reason;
         if (couponRes.status === 'fulfilled' && Array.isArray(couponRes.value?.content)) {
@@ -107,25 +110,29 @@ export function useAdminCommerce() {
         }
       }
     } catch (error) {
+      if (!isCurrent()) return;
       setError(error instanceof Error ? error.message : 'Không thể tải dữ liệu.');
       setIsUsingRealApi(false);
       if (activeTab === 'orders') setOrders([]);
       else if (activeTab === 'campaigns') setCampaigns([]);
       else if (activeTab === 'coupons') setCoupons([]);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [activeTab, orderStatusFilter, campaignStatusFilter, couponStatusFilter, couponCampaignFilter]);
 
   useEffect(() => {
     loadData();
+    return () => { requestRevision.current += 1; detailRevision.current += 1; };
   }, [loadData]);
 
   // ORDER HANDLERS
   const handleViewOrderDetails = async (ord: DetailedAdminOrder) => {
+    const revision = ++detailRevision.current;
     setSelectedOrder(ord);
     try {
       const fullOrder = await adminCommerceApi.getOrder(ord.id);
+      if (revision !== detailRevision.current) return;
       if (fullOrder) {
         setSelectedOrder({
           ...ord,
@@ -135,6 +142,7 @@ export function useAdminCommerce() {
         } as DetailedAdminOrder);
       }
     } catch (error) {
+      if (revision !== detailRevision.current) return;
       setError(error instanceof Error ? error.message : 'Không thể tải chi tiết.');
     }
   };
@@ -171,6 +179,7 @@ export function useAdminCommerce() {
 
   // CAMPAIGN HANDLERS (FR-46, FR-58)
   const handleOpenCreateCampaign = () => {
+    detailRevision.current += 1;
     setSelectedCampaign(null);
     setCampaignForm({
       name: '',
@@ -183,6 +192,7 @@ export function useAdminCommerce() {
   };
 
   const handleOpenEditCampaign = async (camp: DetailedAdminCampaign) => {
+    const revision = ++detailRevision.current;
     setSelectedCampaign(camp);
     setCampaignForm({
       name: camp.name,
@@ -194,6 +204,7 @@ export function useAdminCommerce() {
     setShowCampaignModal(true);
     try {
       const freshCamp = await adminCommerceApi.getCampaign(camp.id);
+      if (revision !== detailRevision.current) return;
       if (freshCamp) {
         setSelectedCampaign(freshCamp as any);
         setCampaignForm({
@@ -205,6 +216,7 @@ export function useAdminCommerce() {
         });
       }
     } catch (error) {
+      if (revision !== detailRevision.current) return;
       setError(error instanceof Error ? error.message : 'Không thể tải chi tiết.');
     }
   };
@@ -253,6 +265,7 @@ export function useAdminCommerce() {
 
   // COUPON HANDLERS (FR-47, FR-58)
   const handleOpenCreateCoupon = () => {
+    detailRevision.current += 1;
     setSelectedCoupon(null);
     setCouponForm({
       campaignId: couponCampaignFilter !== 'ALL' ? couponCampaignFilter : '',
@@ -269,6 +282,7 @@ export function useAdminCommerce() {
   };
 
   const handleOpenEditCoupon = async (c: DetailedAdminCoupon) => {
+    const revision = ++detailRevision.current;
     setSelectedCoupon(c);
     setCouponForm({
       campaignId: c.campaignId || '',
@@ -284,6 +298,7 @@ export function useAdminCommerce() {
     setShowCouponModal(true);
     try {
       const freshCoupon = await adminCommerceApi.getDiscountCode(c.id);
+      if (revision !== detailRevision.current) return;
       if (freshCoupon) {
         setSelectedCoupon(freshCoupon as any);
         setCouponForm({
@@ -302,6 +317,7 @@ export function useAdminCommerce() {
         });
       }
     } catch (error) {
+      if (revision !== detailRevision.current) return;
       setError(error instanceof Error ? error.message : 'Không thể tải chi tiết.');
     }
   };

@@ -12,13 +12,16 @@ test('editor and detail use the same scoped formatting and sanitizer', () => {
   const editor = read('features/seller-listing/components/ListingDescriptionEditor.tsx');
   const content = read('shared/components/RichText/RichTextContent.tsx');
   const detail = read('features/product/pages/ProductDetailPage.tsx');
+  const purchase = read('features/product/components/ProductPurchase.tsx');
   const css = read('shared/styles/rich-text.css');
   assert.match(editor, /shared\/utils\/richTextHtml/);
   assert.match(editor, /nx-listing-editor-content nx-rich-text/);
   for (const source of [editor, content]) assert.match(source, /styles\/rich-text\.css/);
   assert.match(content, /serializeRichTextHtml\(value\)/);
   assert.match(content, /dangerouslySetInnerHTML=\{\{ __html: safeHtml \}\}/);
-  assert.equal((detail.match(/<RichTextContent /g) || []).length, 2);
+  assert.equal((detail.match(/<RichTextContent /g) || []).length, 1);
+  assert.equal((purchase.match(/<RichTextContent /g) || []).length, 1);
+  for (const source of [detail, purchase]) assert.match(source, /<RichTextContent[^>]*value=\{product.description\}/);
   assert.doesNotMatch(detail, /<p[^>]*>\{product\.description/);
   assert.match(css, /\.nx-rich-text ul \{ list-style-type: disc/);
   assert.match(css, /\.nx-rich-text ol \{ list-style-type: decimal/);

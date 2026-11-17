@@ -6,6 +6,7 @@ import { sellerApi, flatCategories, messageOf } from '../../../services/api/sell
 import type { Category } from '../../../services/api/seller';
 import { assertProductRetryMatches, productCreationFingerprint } from '../../../shared/utils/productCreationRetry';
 import type { PendingProductCreation } from '../../../shared/utils/productCreationRetry';
+import { MAX_LISTING_IMAGES, persistListingImages, validateListingImage } from '../services/listingMedia';
 import { initialListingDraft, listingAccessories } from '../services/listingDraft.mock';
 import type { ListingDraftForm, ListingMediaSlot } from '../types/createListing';
 const TITLE_MAX = 120;
@@ -20,14 +21,36 @@ export function useCreateListing() {
   const [submitting,setSubmitting]=useState(false);const pendingProduct=useRef<PendingProductCreation|null>(null);const mutationLock=useRef(false);
   useEffect(()=>{const c=new AbortController();sellerApi.categories(c.signal).then(rows=>setCategories(flatCategories(rows).filter(c=>c.status==='ACTIVE'))).catch(e=>{if(!c.signal.aborted)notify.warning(messageOf(e));});return()=>c.abort();},[]);
   const urls = useRef(new Set<string>());
+  const mediaRef = useRef<ListingMediaSlot[]>([]);
+  const uploadedImages = useRef(new Map<string, string>());
   useEffect(() => () => { urls.current.forEach(url => URL.revokeObjectURL(url)); }, []);
   const mockAction = (label:string) => notify.info(label+' — backend chưa có API hỗ trợ.');
   function updateDraft<K extends keyof ListingDraftForm>(key: K, value: ListingDraftForm[K]) { setSaved(false); setDraft(previous => ({ ...previous, [key]: value })); }
   function toggleSaleMode(id: string) { setSaved(false); setSaleModes(previous => previous.includes(id) ? previous.filter(value => value !== id) : [...previous, id]); }
   function changeQuantity(delta: number) { updateDraft('quantity', Math.min(99, Math.max(1, draft.quantity + delta))); }
   function removeAccessory(name: string) { setSaved(false); setAccessories(previous => previous.filter(item => item !== name)); }
-  function addMedia(_files:File[]) { notify.info('Backend chưa có API upload ảnh. Không gửi ảnh xem trước hoặc ảnh mẫu.'); }
-  function removeMedia(id: string) { const item = media.find(value => value.id === id); if (item && urls.current.delete(item.image)) URL.revokeObjectURL(item.image); setMedia(previous => previous.filter(value => value.id !== id)); }
+  function addMedia(files: File[]) {
+    if (mutationLock.current) return;
+    const added: ListingMediaSlot[] = [];
+    for (const file of files) {
+      const error = validateListingImage(file);
+      if (error) { notify.warning(error); continue; }
+      if (mediaRef.current.length + added.length >= MAX_LISTING_IMAGES) { notify.warning('Mỗi sản phẩm tối đa 9 ảnh.'); break; }
+      const image = URL.createObjectURL(file);
+      urls.current.add(image);
+      added.push({ id: crypto.randomUUID(), label: file.name, image, file });
+    }
+    mediaRef.current = [...mediaRef.current, ...added].map((slot, index) => ({ ...slot, cover: index === 0 }));
+    setMedia(mediaRef.current); setSaved(false);
+  }
+  function removeMedia(id: string) {
+    if (mutationLock.current) return;
+    const item = mediaRef.current.find(value => value.id === id);
+    if (item && urls.current.delete(item.image)) URL.revokeObjectURL(item.image);
+    uploadedImages.current.delete(id);
+    mediaRef.current = mediaRef.current.filter(value => value.id !== id).map((slot, index) => ({ ...slot, cover: index === 0 }));
+    setMedia(mediaRef.current); setSaved(false);
+  }
   function saveDraft(){notify.info('Backend chưa có API lưu bản nháp. Không có dữ liệu được lưu.');}
   async function submitListing(){
     if(mutationLock.current)return;
@@ -42,9 +65,13 @@ export function useCreateListing() {
       assertProductRetryMatches(pendingProduct.current,input);
       const id=pendingProduct.current?.id ?? (await sellerApi.createProduct(input)).id;
       pendingProduct.current={id,fingerprint:productCreationFingerprint(input)};
+      // PUT replaces editable fields: preserve the guarded creation snapshot.
+      // Finish media before SKU creation so upload retries cannot duplicate a SKU.
+      await persistListingImages(id,mediaRef.current,uploadedImages.current,sellerApi.uploadProductImage,
+        images => sellerApi.updateProduct(id,{name:input.name,description:input.description,basePrice:input.basePrice,images}));
       await sellerApi.createSku({productId:id,skuCode:draft.sku.trim(),name:input.name,price:input.basePrice,initialTotalQuantity:draft.quantity,initialAvailableQuantity:draft.quantity});
       pendingProduct.current=null;notify.success('Đã lưu sản phẩm, SKU và tồn kho.');navigate('/seller/products',{state:{listingPublished:true}});
-    }catch(e){notify.warning(messageOf(e)+(pendingProduct.current?' Sản phẩm đã tạo; giữ nguyên thông tin sản phẩm, chỉ sửa mã SKU hoặc số lượng rồi thử lại để hoàn tất tồn kho.':''));}finally{mutationLock.current=false;setSubmitting(false);}
+    }catch(e){notify.warning(messageOf(e)+(pendingProduct.current?' Sản phẩm đã tạo; giữ nguyên tên, mô tả, giá và danh mục rồi thử lại để hoàn tất ảnh, SKU và tồn kho.':''));}finally{mutationLock.current=false;setSubmitting(false);}
   }
   const titleLength = draft.title.length;
   const discountPercent = draft.price > 0 ? Math.round(((draft.price - draft.dealPrice) / draft.price) * 100) : 0;

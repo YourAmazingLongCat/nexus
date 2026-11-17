@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminCatalogApi } from '../services/admin.service';
+import { loadAllAdminPages } from '../services/adminPagination';
 import type {
   AdminCategory,
   AdminProduct,
@@ -34,14 +35,18 @@ export function useAdminCatalog() {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
 
   // FETCH DATA
+  const requestRevision = useRef(0);
+  const detailRevision = useRef(0);
+
   const loadData = useCallback(async () => {
+    const revision = ++requestRevision.current;
+    const isCurrent = () => revision === requestRevision.current;
     setLoading(true);
     setError(null);
     try {
       if (activeTab === 'categories') {
-        const res = await adminCatalogApi.listCategories({
-          status: categoryStatusFilter === 'ALL' ? undefined : categoryStatusFilter,
-        });
+        const res = await loadAllAdminPages((pagination) => adminCatalogApi.listCategories({ status: categoryStatusFilter === 'ALL' ? undefined : categoryStatusFilter, ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setCategories(res.content);
           setIsUsingRealApi(true);
@@ -49,12 +54,12 @@ export function useAdminCatalog() {
           setCategories([]);
         }
       } else if (activeTab === 'products') {
-        const categoryPage = await adminCatalogApi.listCategories({ size: 100 });
+        const categoryPage = await loadAllAdminPages((pagination) => adminCatalogApi.listCategories({  ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         setCategories(categoryPage.content);
-        const res = await adminCatalogApi.listProducts({
-          keyword: productKeyword || undefined,
-          categoryId: productCategoryFilter === 'ALL' ? undefined : productCategoryFilter,
-        });
+        const res = await loadAllAdminPages((pagination) => adminCatalogApi.listProducts({ keyword: productKeyword || undefined,
+          categoryId: productCategoryFilter === 'ALL' ? undefined : productCategoryFilter, ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setProducts(res.content);
           setIsUsingRealApi(true);
@@ -62,7 +67,8 @@ export function useAdminCatalog() {
           setProducts([]);
         }
       } else if (activeTab === 'reviews') {
-        const res = await adminCatalogApi.listReviews();
+        const res = await loadAllAdminPages((pagination) => adminCatalogApi.listReviews({  ...pagination }), isCurrent);
+        if (!isCurrent()) return;
         if (res && Array.isArray(res.content)) {
           setReviews(res.content);
           setIsUsingRealApi(true);
@@ -71,28 +77,32 @@ export function useAdminCatalog() {
         }
       }
     } catch (error) {
+      if (!isCurrent()) return;
       setError(error instanceof Error ? error.message : 'Không thể tải dữ liệu.');
       setIsUsingRealApi(false);
       if (activeTab === 'categories') setCategories([]);
       else if (activeTab === 'products') setProducts([]);
       else if (activeTab === 'reviews') setReviews([]);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [activeTab, categoryStatusFilter, productKeyword, productCategoryFilter]);
 
   useEffect(() => {
     loadData();
+    return () => { requestRevision.current += 1; detailRevision.current += 1; };
   }, [loadData]);
 
   // CATEGORY HANDLERS
   const handleOpenCategoryCreate = () => {
+    detailRevision.current += 1;
     setSelectedCategory(null);
     setCategoryForm({ name: '', description: '', status: 'ACTIVE' });
     setShowCategoryModal(true);
   };
 
   const handleOpenCategoryEdit = async (cat: AdminCategory) => {
+    const revision = ++detailRevision.current;
     setSelectedCategory(cat);
     setCategoryForm({
       name: cat.name,
@@ -102,6 +112,7 @@ export function useAdminCatalog() {
     setShowCategoryModal(true);
     try {
       const freshCat = await adminCatalogApi.getCategory(cat.id);
+      if (revision !== detailRevision.current) return;
       if (freshCat) {
         setSelectedCategory(freshCat);
         setCategoryForm({
@@ -111,6 +122,7 @@ export function useAdminCatalog() {
         });
       }
     } catch (error) {
+      if (revision !== detailRevision.current) return;
       setError(error instanceof Error ? error.message : 'Không thể tải chi tiết.');
     }
   };

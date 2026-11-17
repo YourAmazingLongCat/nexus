@@ -1,5 +1,6 @@
 ﻿import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 
 test('listing validates backend image MIME and size limits', async () => {
@@ -42,4 +43,42 @@ test('upload uses authenticated shared multipart transport and validates publicU
     globalThis.fetch=async()=>Response.json({publicUrl:'blob:local'});
     await assert.rejects(sellerApi.uploadProductImage('p',new File(['photo'],'photo.jpg')),/không hợp lệ/);
   } finally {globalThis.fetch=original;await server.close();}
+});
+
+
+test('removing every image after an attachment failure clears persisted images on retry', async () => {
+  const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
+  try {
+    const { persistListingImages } = await server.ssrLoadModule('/src/features/seller-listing/services/listingMedia.ts');
+    const attachments = []; const cache = new Map([['a', 'https://images/a']]);
+    const upload = async () => { throw Error('must not reupload'); };
+    await assert.rejects(persistListingImages('product', [{id:'a'}], cache, upload, async images => { attachments.push(images); throw Error('lost response'); }), /lost response/);
+    await persistListingImages('product', [], cache, upload, async images => attachments.push(images));
+    assert.deepEqual(attachments, [[{imageUrl:'https://images/a', primary:true}], []]);
+  } finally { await server.close(); }
+});
+
+test('missing or invalid files never become preview URLs in persisted media', async () => {
+  const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
+  try {
+    const { persistListingImages } = await server.ssrLoadModule('/src/features/seller-listing/services/listingMedia.ts');
+    const forbidden = async () => assert.fail('must not write invalid media');
+    await assert.rejects(persistListingImages('p', [{id:'missing',image:'blob:local'}], new Map(), forbidden, forbidden));
+    await assert.rejects(persistListingImages('p', [{id:'svg',file:{size:1,type:'image/svg+xml'}}], new Map(), forbidden, forbidden));
+  } finally { await server.close(); }
+});
+
+test('listing hook wires file previews and guarded cached attachment before SKU creation', async () => {
+  const source = await readFile(new URL('../src/features/seller-listing/hooks/useCreateListing.ts', import.meta.url), 'utf8');
+  assert.ok(source.includes('URL.createObjectURL(file)'));
+  assert.ok(source.includes('validateListingImage(file)'));
+  assert.ok(source.includes('URL.revokeObjectURL(item.image)'));
+  assert.ok(source.includes('urls.current.forEach(url => URL.revokeObjectURL(url))'));
+  assert.ok(source.includes('MAX_LISTING_IMAGES'));
+  assert.ok(source.includes('persistListingImages(id,mediaRef.current,uploadedImages.current,sellerApi.uploadProductImage'));
+  assert.ok(source.includes('sellerApi.updateProduct(id,{name:input.name,description:input.description,basePrice:input.basePrice,images})'));
+  const submit = source.slice(source.indexOf('async function submitListing()'));
+  assert.ok(submit.indexOf('assertProductRetryMatches') < submit.indexOf('persistListingImages'));
+  assert.ok(submit.indexOf('persistListingImages') < submit.indexOf('await sellerApi.createSku'));
+  assert.ok(submit.indexOf('pendingProduct.current=null') > submit.indexOf('await sellerApi.createSku'));
 });

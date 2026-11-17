@@ -19,6 +19,16 @@ export const sellerApi = {
     product: (id: string, signal?: AbortSignal) => apiGet<Product>('/catalog/products/' + encodeURIComponent(id), signal),
     createProduct: (data: ProductInput & { categoryId: string }) => apiRequest<Product>(productPath, json('POST', data)),
     updateProduct: (id: string, data: ProductInput) => apiRequest<Product>(productPath + '/' + encodeURIComponent(id), json('PUT', data)),
+    uploadProductImage: async (id: string, file: File): Promise<string> => {
+      const body = new FormData();
+      body.append('file', file);
+      const result = await rawRequest<unknown>(productPath + '/' + encodeURIComponent(id) + '/images/upload', { method: 'POST', body });
+      if (!record(result) || typeof result.publicUrl !== 'string') throw new Error('Phản hồi upload ảnh không hợp lệ.');
+      let url: URL;
+      try { url = new URL(result.publicUrl); } catch { throw new Error('Phản hồi upload ảnh không hợp lệ.'); }
+      if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Phản hồi upload ảnh không hợp lệ.');
+      return result.publicUrl;
+    },
     assignCategory: (id: string, categoryId: string) => apiRequest<Product>(productPath + '/' + encodeURIComponent(id) + '/category', json('PATCH', { categoryId })),
     deleteProduct: (id: string) => apiRequest<void>(productPath + '/' + encodeURIComponent(id), json('DELETE')),
     inventories: (query: URLSearchParams, signal?: AbortSignal) => apiGet<Page<Inventory>>(fulfillmentPath + '/inventories?' + query, signal),

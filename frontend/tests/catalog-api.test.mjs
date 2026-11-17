@@ -48,8 +48,9 @@ test('catalog cards and detail keep main UI structures with no fabricated data o
 
 test('accepted bid is announced before refresh and refresh failure is not reported as rejection', async () => {
  const { readFile } = await import('node:fs/promises');
- const source = await readFile(new URL('../src/features/product/pages/ProductDetailPage.tsx', import.meta.url), 'utf8');
+ const source = await readFile(new URL('../src/features/product/hooks/useProductDetail.ts', import.meta.url), 'utf8');
  const handler = source.slice(source.indexOf(' async function submitBid()'), source.indexOf(' async function share()'));
+ assert.match(handler, /await placeBid\(auction.id, bid\)/);
  assert.ok(handler.indexOf("notify.success('Đặt giá thành công.')") < handler.indexOf('await getAuction(auction.id)'));
  assert.match(handler, /Giá thầu đã được ghi nhận nhưng tải lại phiên đấu giá thất bại/);
  assert.match(handler, /notify.warning\(message\)/);
