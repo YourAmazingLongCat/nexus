@@ -72,7 +72,7 @@ export async function login(input: LoginInput, remember: boolean, signal?: Abort
   const session = normalizeLogin(response);
   if (!session) throw new AuthApiError(0, 'Phản hồi máy chủ không hợp lệ.');
   // The selector is a requested destination, never an authorization control.
-  if (!session.roles?.includes(input.role.toUpperCase())) throw new AuthApiError(403, 'Tài khoản không có vai trò đã chọn.');
+  if (!session.roles.includes('ADMIN') && !session.roles.includes(input.role.toUpperCase())) throw new AuthApiError(403, 'Tài khoản không có vai trò đã chọn.');
   saveSession(session, remember);
   return session;
 }

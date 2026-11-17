@@ -100,7 +100,7 @@ export function useSignIn() {
       '(prefers-reduced-motion: reduce)',
     ).matches;
     try {
-      await Promise.all([
+      const [session] = await Promise.all([
         login({ identifier, password, role }, remember, controller.current.signal),
         wait(reduced ? 0 : 1100),
       ]);
@@ -110,7 +110,7 @@ export function useSignIn() {
       await wait(reduced ? 0 : 650);
       if (request.current === id) {
         setPhase('welcome');
-        navigate(role === 'seller' ? '/seller-hub' : '/buyer-hub');
+        navigate(session.roles.includes('ADMIN') ? '/admin' : role === 'seller' ? '/seller-hub' : '/buyer-hub');
       }
     } catch (error) {
       if (request.current === id) {
