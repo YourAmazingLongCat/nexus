@@ -6,6 +6,7 @@ import { commerceApi, type CommerceOrder } from '../../../services/api/commerce'
 import { buyerApi, type BuyerProfileResponse } from '../../../services/api/buyer';
 import type { AuctionFilterId, BidStatus, BuyerBid, BuyerHubTabId, BuyerOrder, BuyerProfile, C2cDraft, OrderFilterId, SavedItem } from '../types/buyerHub';
 const initialDraft: C2cDraft = { name: '', category: '', duration: '', startPrice: '', stepPrice: '', escrow: false };
+// TODO backend: personal auction list, saved items, C2C, wallet and support APIs are not exposed.
 const unavailable = () => notify.info('Backend chưa cung cấp chức năng này. Không có thay đổi nào được thực hiện.');
 const report = (error: unknown) => notify.error(apiErrorMessage(error));
 
@@ -23,15 +24,22 @@ export function useBuyerHub() {
   const [c2cDraft, setC2cDraft] = useState<C2cDraft>(initialDraft);
   const refreshOrders = async () => {
     const first = await commerceApi.orders();
-    const pages = await Promise.all(Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, i) => commerceApi.orders(i + 1)));
-    const summaries = [first, ...pages].flatMap(page => page.content);
-    const details = await Promise.all(summaries.map(order => commerceApi.order(order.id)));
+    // Bound concurrent requests: the existing UI displays all orders without pagination.
+    const summaries = [...first.content];
+    for (let page = 1; page < first.totalPages; page++) summaries.push(...(await commerceApi.orders(page)).content);
+    const details: CommerceOrder[] = [];
+    for (let index = 0; index < summaries.length; index += 5) {
+      details.push(...await Promise.all(summaries.slice(index, index + 5).map(order => commerceApi.order(order.id))));
+    }
     setOrders(details);
   };
   useEffect(() => {
-    Promise.resolve().then(() => Promise.all([refreshOrders(), buyerApi.profile().then(setProfile)]))
-      .catch(error => { setLoadError(error instanceof Error ? error.message : 'Không thể tải dữ liệu.'); report(error); })
-      .finally(() => setLoading(false));
+    let active = true;
+    const onError = (error: unknown) => { if (active) { setLoadError(apiErrorMessage(error)); report(error); } };
+    // Load independently so unavailable profile data does not discard real orders.
+    Promise.all([refreshOrders().catch(onError), buyerApi.profile().then(value => { if (active) setProfile(value); }).catch(onError)])
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
   const buyerProfile: BuyerProfile = { name: profile?.fullName ?? profile?.username ?? '—', initial: (profile?.fullName ?? profile?.username ?? '?').slice(0, 1),
     verified: false, memberTier: '—', memberId: profile?.id ?? '—', rating: '—', reviewCount: null, winPaymentRate: '—',
@@ -79,12 +87,13 @@ export function useBuyerHub() {
       for (const item of order.items) {
         if (item.skuId) throw new Error("Mua lại biến thể chưa được hỗ trợ. Vui lòng mở sản phẩm và chọn lại biến thể theo giá hiện tại.");
         const product = await buyerApi.product(item.productId);
+        if (product.status !== 'ACTIVE' || product.basePrice <= 0) throw new Error('Sản phẩm không còn được bán hoặc chưa có giá mua hợp lệ.');
         await commerceApi.add({ productId: product.id, sellerId: product.sellerId, productName: product.name, unitPrice: Number(product.basePrice), quantity: item.quantity });
         added++;
       }
       window.dispatchEvent(new Event('nexus:cart-changed'));
       notify.success('Đã thêm sản phẩm vào giỏ hàng theo giá hiện tại.'); navigate('/cart');
-    } catch (error) { if (added) notify.info(`${added} sản phẩm đã được thêm. Các mục còn lại chưa được thêm.`); report(error); } finally { setBusy(false); }
+    } catch (error) { if (added) window.dispatchEvent(new Event('nexus:cart-changed')); if (added) notify.info(`${added} sản phẩm đã được thêm. Các mục còn lại chưa được thêm.`); report(error); } finally { setBusy(false); }
   };
   const handleOpenC2c = () => { setActiveTab('c2c'); window.scrollTo({ top: 400, behavior: 'smooth' }); };
   const handleC2cDraftChange = <K extends keyof C2cDraft>(field: K, value: C2cDraft[K]) => setC2cDraft(current => ({ ...current, [field]: value }));

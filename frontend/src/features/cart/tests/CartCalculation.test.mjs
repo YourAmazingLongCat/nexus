@@ -5,7 +5,7 @@ import { createServer } from 'vite';
 test('CartCalculation preserves existing cart behavior', async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
   try {
-    const { initialCartItems, vouchers } = await server.ssrLoadModule('/src/features/cart/mocks/cart.mock.ts');
+    const { initialCartItems, vouchers } = await server.ssrLoadModule('/src/features/cart/tests/fixtures/cart.fixture.ts');
     const { calculateTotals } = await server.ssrLoadModule('/src/features/cart/services/cart.calculation.ts');
     const voucher = vouchers[0];
     const totals = calculateTotals(initialCartItems, { shippingFee: 0, voucher });

@@ -18,7 +18,7 @@ test('catalog DTO adapters, paging, null omission and API contracts', async () =
   globalThis.fetch = async () => Response.json([{ id: 'category', name: 'Danh mục', status: 'ACTIVE', sortOrder: 0, children: [] }]);
   assert.equal((await catalog.getCatalogCategories())[0].parentId, null);
   for (const bad of [null, {}, { ...product, basePrice: '100' }, { ...product, status: 'WRONG' }]) assert.throws(() => catalog.adaptProduct(bad), /không hợp lệ/);
-  globalThis.fetch = async (url, options) => { last = { url, options }; return Response.json({ id: 'bid', status: 'ACCEPTED' }); };
+  globalThis.fetch = async (url, options) => { last = { url, options }; return Response.json(url.includes('/bids?') || url.includes('/reviews?') ? { content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, first: true, last: true } : { id: 'bid', auctionId: 'auction/id', bidderId: 'buyer', amount: 1500000, status: 'ACCEPTED', placedAt: '2026-01-01T00:00:00Z' }); };
   await catalog.placeBid('auction/id', 1500000); assert.ok(last.url.endsWith('/buyer/auction/auctions/auction%2Fid/bids')); assert.equal(last.options.method, 'POST'); assert.deepEqual(JSON.parse(last.options.body), { amount: 1500000 });
   await catalog.getBids('sale', 2); assert.ok(last.url.endsWith('/sale/bids?page=2&size=10'));
   await catalog.getReviews('product', 1); assert.ok(last.url.endsWith('/product/reviews?page=1&size=10'));

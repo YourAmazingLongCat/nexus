@@ -1,4 +1,4 @@
-﻿import { clearSession, getSession } from '../../features/auth/services/auth.api';
+﻿import { clearSessionForAuthorization, getSession } from '../auth/session';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public details: unknown[] = [], public code?: string, public data?: unknown) {
@@ -30,8 +30,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (text) { try { body = JSON.parse(text); } catch { if (response.ok) throw new ApiError(response.status, 'Phản hồi máy chủ không hợp lệ.'); } }
   if (!response.ok) {
     if (response.status === 401 && headers.has('Authorization')) {
-      clearSession();
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('nexus:session-changed'));
+      clearSessionForAuthorization(headers.get('Authorization'));
     }
     const error = body && typeof body === 'object' ? body as { message?: unknown; details?: unknown[]; error?: unknown; code?: unknown; data?: unknown } : null;
     throw new ApiError(response.status, typeof error?.message === 'string' && error.message ? error.message : `Yêu cầu không thành công (${response.status}).`, Array.isArray(error?.details) ? error.details : [], typeof error?.error === 'string' ? error.error : typeof error?.code === 'string' ? error.code : undefined, error?.data);

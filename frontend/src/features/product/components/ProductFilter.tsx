@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useCategories } from '../../category/services/categoryService';
+import { useCategories } from '../../category/hooks/useCategories';
 interface Props {
   categoryId: string;
   mode: string;

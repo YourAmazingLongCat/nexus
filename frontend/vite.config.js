@@ -5,6 +5,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     plugins: [react()],
-    server: { proxy: { '/api': { target: env.API_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true } } },
+    server: { proxy: { ...Object.fromEntries(['/api', '/oauth2/authorization', '/login/oauth2'].map(path => [path, { target: env.API_PROXY_TARGET || 'http://localhost:8080', changeOrigin: true }])) } },
   }
 })

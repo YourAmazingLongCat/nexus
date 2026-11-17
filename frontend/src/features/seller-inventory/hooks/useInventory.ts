@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadSellerInventory, productImagesForUpdate, messageOf, sellerApi } from '../../seller-hub/services/seller.api';
+import { loadSellerInventory, productImagesForUpdate, messageOf, sellerApi } from '../../../services/api/seller';
 import type { InventoryProduct } from '../types/inventory';
 
 import { notify } from '../../../shared/components/Toast';

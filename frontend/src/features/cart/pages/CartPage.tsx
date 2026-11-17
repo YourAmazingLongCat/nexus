@@ -8,7 +8,7 @@ import PaymentMethods from '../components/PaymentMethods';
 import ShippingAddressCard from '../components/ShippingAddressCard';
 import ShippingOptions from '../components/ShippingOptions';
 import { useCart } from '../hooks/useCart';
-import { paymentMethods, shippingMethods } from '../mocks/cart.mock';
+import { paymentMethods, shippingMethods } from '../constants/cart.constants';
 
 /** Buyer cart page: presentation only; state and actions live in useCart. */
 export default function CartPage() {
@@ -27,7 +27,7 @@ export default function CartPage() {
         onCancel={cancelCheckout} onConfirm={confirmCheckout}
       />
       <div className="nx-container">
-        <p className="alert alert-info" role="note">Đơn hàng được gửi tới máy chủ. Hiện hỗ trợ COD; thanh toán trực tuyến và lựa chọn giao vận chưa được hỗ trợ. Tổng cuối cùng do máy chủ xác nhận.</p>
+        <p className="alert alert-info" role="note">Đơn hàng được gửi tới máy chủ. Hiện hỗ trợ COD; thanh toán trực tuyến và lựa chọn giao vận chưa được hỗ trợ. Máy chủ tính tổng từ dữ liệu giỏ hàng; việc kiểm tra giá catalog và tồn kho trực tiếp chưa được backend tích hợp. Mỗi lần đặt hàng chỉ hỗ trợ một người bán.</p>
         {/* Flow progress */}
         <div className="nx-cart-topbar">
 

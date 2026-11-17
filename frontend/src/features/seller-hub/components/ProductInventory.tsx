@@ -1,6 +1,6 @@
 ﻿import type { SellerHubState } from '../hooks/useSellerHub';
 import type { SellerProduct } from '../types/sellerHub';
-import { formatSellerMoney } from '../mocks/sellerHub.mock';
+import { formatSellerMoney } from '../constants/sellerHub.constants';
 const statusLabels = { ready: 'Sẵn sàng giao', low: 'Cần nhập thêm', auction: 'Còn 03h 12m', available: 'Kho dồi dào' };
 function ProductRow({ product, hub }: { product: SellerProduct; hub: SellerHubState }) {
   const isAuction = product.status === 'auction';

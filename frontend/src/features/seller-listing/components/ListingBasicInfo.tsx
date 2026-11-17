@@ -1,6 +1,4 @@
-import {
-  listingBrands,
-} from '../mocks/createListing.mock';
+import { listingBrands } from '../constants/createListing.constants';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
 // Bước 1 — Thông tin cơ bản & phân loại ngành hàng.

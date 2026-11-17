@@ -1,5 +1,5 @@
 import ListingDescriptionEditor from './ListingDescriptionEditor';
-import { listingConditions } from '../mocks/createListing.mock';
+import { listingConditions } from '../constants/createListing.constants';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
 // Bước 3 — Tình trạng thực tế, thông số, phụ kiện và mô tả.

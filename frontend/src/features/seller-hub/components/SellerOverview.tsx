@@ -1,4 +1,5 @@
-import { sellerKpis as templates, sellerTabs as tabs } from '../mocks/sellerHub.mock';
+import { sellerKpis as templates } from '../services/sellerOverview.mock';
+import { sellerTabs as tabs } from '../constants/sellerHub.constants';
 import type { SellerTabId } from '../types/sellerHub';
 
 interface Props {

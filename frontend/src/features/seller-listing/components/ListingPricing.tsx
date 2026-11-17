@@ -1,4 +1,4 @@
-import { listingSaleModes } from '../mocks/createListing.mock';
+import { listingSaleModes } from '../constants/createListing.constants';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
 // Bước 4 — Phương thức bán, định giá và số lượng kho.

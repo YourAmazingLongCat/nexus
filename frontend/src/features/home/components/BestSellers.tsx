@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useHomeProducts } from '../services/useHomeProducts';
+import { useHomeProducts } from '../hooks/useHomeProducts';
 import HomeProductPager from './HomeProductPager';
 
 function BestSellers() {

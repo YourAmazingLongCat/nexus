@@ -1,5 +1,5 @@
 ﻿import { Link } from 'react-router-dom';
-import type { CatalogCategory as Category } from '../../product/services/catalog.api';
+import type { CatalogCategory as Category } from '../../../services/api/catalog';
 function CategoryCard({ category }: { category: Category }) {
   return (
     <Link to={`/categories/${category.id}`} className="nx-category-link">

@@ -9,26 +9,22 @@ import LiveFeedWidget from '../components/LiveFeedWidget';
 import OrdersTab from '../components/OrdersTab';
 import SavedCartTab from '../components/SavedCartTab';
 import SupportWidget from '../components/SupportWidget';
-import { useBuyerHub } from '../hooks/useBuyerHub';
+import { useBuyerHubViewModel } from '../hooks/useBuyerHubViewModel';
 import {
-  auctionFilters,
-  buyerKpis,
   c2cCategories,
   c2cDurations,
   guaranteeItems,
   hubCopy,
-  hubTabs,
-  orderFilters,
-} from '../mocks/buyerHub.mock';
+} from '../constants/buyerHub.constants';
 
 /**
  * Buyer Hub — "Trung tâm Mua hàng & Quản lý Đấu giá".
- * Shared demo saved items and orders; legacy fixture sections remain labeled sample data.
+ * Live orders and profile; unsupported backend capabilities retain empty states.
  */
 export default function BuyerHubPage() {
   const {
-    orderCount, orderCounts, loading, loadError, buyerProfile,
-    savedCount,
+    orderCount, loading, loadError, buyerProfile,
+    displayKpis, displayTabs, displayAuctionFilters, displayOrderFilters,
     handleMoveToCart,
     activeTab,
     setActiveTab,
@@ -68,7 +64,7 @@ export default function BuyerHubPage() {
     handleGuaranteeLink,
     handleComplaint,
     handleSupportChat,
-  } = useBuyerHub();
+  } = useBuyerHubViewModel();
 
   return (
     <main className="nx-hub-page">
@@ -77,17 +73,17 @@ export default function BuyerHubPage() {
         <p className="nx-hub-empty" role="status">{loading ? "Đang tải dữ liệu..." : loadError || "Đơn hàng và hồ sơ được tải từ máy chủ. Backend chưa hỗ trợ danh sách đấu giá cá nhân, lưu sau, ví và chỉ số người mua."}</p>
         <BuyerProfileCard profile={buyerProfile} onCreateAuction={handleOpenC2c} />
 
-        <BuyerKpiGrid kpis={buyerKpis.map(kpi => ({ ...kpi, value: "—", pill: undefined, caption: undefined, timer: undefined }))} timerSeconds={winRemaining} />
+        <BuyerKpiGrid kpis={displayKpis} timerSeconds={winRemaining} />
 
         <AuctionWinAlert notice={null} onViewDetail={handleWinDetail} onPay={handlePayment} />
 
         <div className="nx-hub-layout">
           <div className="nx-hub-main">
-            <HubTabs tabs={hubTabs.map((tab) => tab.id === 'cart' ? { ...tab, count: savedCount } : tab.id === 'orders' ? { ...tab, count: orderCount } : { ...tab, count: 0 })} activeTab={activeTab} onChange={setActiveTab} />
+            <HubTabs tabs={displayTabs} activeTab={activeTab} onChange={setActiveTab} />
 
             {activeTab === 'auctions' && (
               <AuctionTab
-                filters={auctionFilters.map(filter => ({ ...filter, count: 0 }))}
+                filters={displayAuctionFilters}
                 activeFilter={auctionFilter}
                 search={auctionSearch}
                 filterLabel={hubCopy.auctionFilterLabel}
@@ -104,7 +100,7 @@ export default function BuyerHubPage() {
               <>
 
               <OrdersTab
-                filters={orderFilters.map(filter => ({ ...filter, count: orderCounts[filter.id] ?? 0 }))}
+                filters={displayOrderFilters}
                 activeFilter={orderFilter}
                 summary={`${orderCount} đơn hàng từ máy chủ`}
                 orders={visibleOrders}

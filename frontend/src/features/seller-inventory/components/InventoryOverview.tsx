@@ -1,4 +1,4 @@
-import { inventoryKpis as templates } from '../mocks/inventory.mock';
+import { inventoryKpis as templates } from '../services/inventoryOverview.mock';
 export default function InventoryOverview({ onAction }: { onAction: (label: string) => void }) {
   const inventoryKpis=templates.map(k=>({...k,value:'—',left:'Chưa có API thống kê',right:''}));
   return <><div className="nx-stock-context"><p><span className="nx-stock-blue">●</span> Dữ liệu từ API <span>•</span> Đồng bộ kho: <strong>Chưa có thời điểm đồng bộ</strong></p></div>

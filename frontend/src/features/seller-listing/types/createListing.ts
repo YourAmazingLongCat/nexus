@@ -1,4 +1,4 @@
-// Kiểu dữ liệu cho trang "Đăng Bán Sản Phẩm Mới" — giai đoạn UI (mock only).
+// View and form contracts for creating seller listings.
 export interface ListingConditionOption {
   id: string;
   title: string;
@@ -9,6 +9,8 @@ export interface ListingMediaSlot {
   id: string;
   label: string;
   image: string;
+  /** Original selected file, when the slot represents a local upload. */
+  file?: File;
   cover?: boolean;
   serialVerified?: boolean;
 }

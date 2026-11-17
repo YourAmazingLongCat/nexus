@@ -1,4 +1,4 @@
-﻿import { inventoryTabs } from '../mocks/inventory.mock';
+﻿import { inventoryTabs } from '../constants/inventory.constants';
 import type { InventoryState } from '../hooks/useInventory';
 export default function InventoryFilters({ hub }: { hub: InventoryState }) {
   return <section className="nx-stock-filters" aria-label="Bộ lọc sản phẩm"><div className="nx-stock-tabs-row"><div className="nx-stock-tabs" role="group" aria-label="Trạng thái sản phẩm">{inventoryTabs.map(tab => <button className={hub.tab === tab.id ? 'is-active' : ''} aria-pressed={hub.tab === tab.id} key={tab.id} onClick={() => hub.setTab(tab.id)}>{tab.id === 'auction' && <span className="nx-stock-red">●</span>}{tab.label}<span className="nx-stock-count">{hub.products.filter(p=>tab.id==='all'||p.status===tab.id).length}</span></button>)}</div><div className="nx-stock-view"><button aria-label="Dạng danh sách" aria-pressed="true" className="is-active"><i className="bi bi-list-ul" aria-hidden="true" /></button><button aria-label="Dạng lưới (chưa có thiết kế)" aria-pressed="false" onClick={() => hub.action('Dạng lưới: chờ thiết kế')}><i className="bi bi-grid" aria-hidden="true" /></button></div></div>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { auctionDeadlineSeconds } from '../mocks/cart.mock';
 import { formatCountdown } from '../utils/cart.format';
 
 /**
@@ -7,14 +6,14 @@ import { formatCountdown } from '../utils/cart.format';
  * must come from the auction service once the API layer exists.
  */
 export default function AuctionWinBanner({
-  seconds = auctionDeadlineSeconds,
+  seconds,
 }: {
   seconds?: number;
 }) {
-  const [remaining, setRemaining] = useState(seconds);
+  const [remaining, setRemaining] = useState(seconds ?? 0);
 
   useEffect(() => {
-    if (seconds <= 0) return;
+    if (seconds === undefined || seconds <= 0) return;
     const timer = window.setInterval(
       () => setRemaining((value) => Math.max(0, value - 1)),
       1000,
@@ -31,16 +30,14 @@ export default function AuctionWinBanner({
       <div className="nx-cart-banner-body">
         <div className="nx-cart-banner-head">
           <h2 className="nx-cart-banner-title">
-            Bạn có 1 sản phẩm đấu giá thành công cần hoàn tất!
+            Sản phẩm đấu giá cần hoàn tất thanh toán
           </h2>
           <span className="nx-cart-banner-pill">
-            Thời hạn còn {formatCountdown(remaining)}
+            {seconds === undefined ? 'Chưa có thời hạn từ hệ thống' : `Thời hạn còn ${formatCountdown(remaining)}`}
           </span>
         </div>
         <p className="nx-cart-banner-text">
-          Quy chuẩn FR-36: Phiên đấu giá đã chốt giá sàn cuối cùng. Đơn hàng sẽ
-          tự động bảo lưu phiên đấu giá độc quyền cho tài khoản của bạn trong 24
-          giờ.
+          Thời hạn thanh toán được xác nhận bởi hệ thống đấu giá.
         </p>
       </div>
     </section>

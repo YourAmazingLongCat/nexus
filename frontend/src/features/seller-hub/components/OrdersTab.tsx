@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { SellerHubState } from '../hooks/useSellerHub';
 import type { SellerOrder } from '../types/sellerHub';
-import { formatSellerMoney, orderStatusLabels, sellerOrderFilters } from '../mocks/sellerHub.mock';
+import { formatSellerMoney, orderStatusLabels, sellerOrderFilters } from '../constants/sellerHub.constants';
 
 function OrderRow({ order }: { order: SellerOrder }) {
   return <tr className={order.express && order.status === 'pending' ? 'nx-seller-auction-row' : ''}>

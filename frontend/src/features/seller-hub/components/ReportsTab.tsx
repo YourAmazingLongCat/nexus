@@ -1,10 +1,6 @@
 import type { SellerHubState } from '../hooks/useSellerHub';
-import { formatSellerMoney, sellerReportKpis as templates } from '../mocks/sellerHub.mock';
-import type { RevenuePoint, ShopReview, TopSku } from '../types/sellerHub';
-const sellerReportKpis=templates.map(k=>({...k,value:'—',caption:'Chưa có API báo cáo'}));
-const sellerRevenueSeries:RevenuePoint[]=Array.from({length:6},(_,i)=>({label:'T'+(i+1),value:0,growth:'—'}));const sellerReviews:ShopReview[]=[];const sellerTopSkus:TopSku[]=[];
-const shopRating={score:'—',total:'Chưa có API đánh giá',stars:[5,4,3,2,1].map(star=>({star,percent:0}))};
-const sellerReviewKpis={replyRate:'—',replyNote:'Chưa có dữ liệu',responseNote:'Chưa có API'};
+import { formatSellerMoney } from '../constants/sellerHub.constants';
+import { sellerReportKpis, sellerRevenueSeries, sellerReviews, sellerTopSkus, shopRating, sellerReviewKpis } from '../services/sellerReporting';
 
 const ranges = [{ id: '3m', label: '3 tháng' }, { id: '6m', label: '6 tháng' }, { id: '12m', label: '12 tháng' }];
 

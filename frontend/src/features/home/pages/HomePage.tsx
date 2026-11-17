@@ -1,11 +1,9 @@
-import { useState } from 'react';
+import { useHomeFilter, type HomeFilter } from '../hooks/useHomeFilter';
 import HeroBanner from '../components/HeroBanner';
 import FeaturedCategories from '../components/FeaturedCategories';
 import NewArrivals from '../components/NewArrivals';
 import BestSellers from '../components/BestSellers';
 import PromotionSection from '../components/PromotionSection';
-
-type HomeFilter = 'all' | 'auction' | 'buy-now';
 
 const filters: { id: HomeFilter; label: string }[] = [
   { id: 'all', label: 'Tất cả sản phẩm' },
@@ -14,7 +12,7 @@ const filters: { id: HomeFilter; label: string }[] = [
 ];
 
 function HomePage() {
-  const [filter, setFilter] = useState<HomeFilter>('all');
+  const { filter, setFilter, showAuctions, showBuyNow } = useHomeFilter();
 
   return (
     <main className="nx-home">
@@ -50,8 +48,8 @@ function HomePage() {
             ))}
           </div>
         </div>
-        {filter !== 'buy-now' && <NewArrivals />}
-        {filter !== 'auction' && <BestSellers />}
+        {showAuctions && <NewArrivals />}
+        {showBuyNow && <BestSellers />}
         <PromotionSection />
       </div>
     </main>

@@ -20,7 +20,7 @@ test('current backend nullable categories and UUID auction keyword are supported
     const product = { id: 'p', name: 'Product', basePrice: 10, status: 'ACTIVE', sellerId: 's', createdAt: '2026-01-01T00:00:00Z' };
     assert.equal(catalog.adaptProduct(product).categoryId, null);
     let calls = 0;
-    globalThis.fetch = async () => { calls++; return Response.json({ content: [], totalPages: 0 }); };
+    globalThis.fetch = async () => { calls++; return Response.json({ content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, first: true, last: true }); };
     await assert.rejects(catalog.listAuctions(new URLSearchParams({ keyword: 'camera' })), /UUID/);
     assert.equal(calls, 0);
     await catalog.listAuctions(new URLSearchParams({ keyword: '123e4567-e89b-12d3-a456-426614174000' }));
@@ -35,12 +35,12 @@ test('missing catalog enrichment does not hide valid inventory or header cart', 
     const seller = await server.ssrLoadModule('/src/features/seller-hub/services/seller.api.ts');
     const { headerApi } = await server.ssrLoadModule('/src/services/api/header.ts');
     const row = id => ({ id: 'i-' + id, skuId: 'sku-' + id, productId: id, skuCode: id, warehouseId: 'w', totalQuantity: 2, availableQuantity: 2, status: 'AVAILABLE' });
-    const product = { id: 'live', sellerId: 's', name: 'Live product', categoryId: 'c', status: 'ACTIVE', basePrice: 100, images: [] };
+    const product = { id: 'live', sellerId: 's', name: 'Live product', categoryId: 'c', status: 'ACTIVE', basePrice: 100, images: [], createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' };
     let missingStatus = 404;
     let lookups = [];
     globalThis.fetch = async url => {
       if (url.includes('/inventories?')) return Response.json({ content: [row('live'), row('deleted')], page: 0, size: 100, totalElements: 2, totalPages: 1, first: true, last: true });
-      if (url.endsWith('/cart')) return Response.json({ items: [{ id: 'a', productId: 'live', quantity: 2 }, { id: 'b', productId: 'deleted', quantity: 3 }, { id: 'c', productId: 'live', quantity: 1 }] });
+      if (url.endsWith('/cart')) return Response.json({ id: 'cart', buyerId: 'buyer', status: 'ACTIVE', subtotal: 600, itemCount: 6, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', items: [{ id: 'a', productId: 'live', quantity: 2 }, { id: 'b', productId: 'deleted', quantity: 3 }, { id: 'c', productId: 'live', quantity: 1 }].map(item => ({ ...item, skuId: null, sellerId: 's', unitPrice: 100, lineTotal: item.quantity * 100 })) });
       lookups.push(url);
       if (url.endsWith('/deleted')) return Response.json({ message: 'Missing' }, { status: missingStatus });
       return Response.json(product);

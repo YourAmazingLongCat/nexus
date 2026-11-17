@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../product/services/productService';
-import { useHomeProducts } from '../services/useHomeProducts';
+import { useHomeProducts } from '../hooks/useHomeProducts';
 import { notify } from '../../../shared/components/Toast';
 import { CatalogImage } from '../../product/components/CatalogProductCard';
 

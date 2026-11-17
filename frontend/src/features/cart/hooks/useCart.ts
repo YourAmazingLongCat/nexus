@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { notify } from '../../../shared/components/Toast';
 import { commerceApi, type CommerceCart } from '../../../services/api/commerce';
 import { buyerApi } from '../../../services/api/buyer';
-import { calculateTotals } from '../services/cart.calculation';
-import { hasCartFinancialDrift, validateCheckoutAddress } from '../services/cart.contract';
-import { CartMutationQueue } from '../services/cartMutationQueue';
+import { calculateTotals } from '../utils/cart.calculation';
+import { hasCartFinancialDrift, validateCheckoutAddress, validateCheckoutCart } from '../utils/cart.contract';
+import { CartMutationQueue } from '../utils/cartMutationQueue';
 import type { CartItem, DeliveryAddress, PaymentMethodId, ShippingMethodId, Voucher } from '../types/cart';
 
 export function useCart() {
@@ -34,6 +34,7 @@ export function useCart() {
     const data = next ?? await commerceApi.cart();
     const products = await Promise.all(data.items.map(line => buyerApi.product(line.productId).catch(() => null)));
     setCart(data);
+    setLoadError('');
     window.dispatchEvent(new Event("nexus:cart-changed"));
     const queue = queueRef.current;
     setItems(data.items.map((line, index) => {
@@ -75,9 +76,10 @@ export function useCart() {
   }, []);
   useEffect(() => {
     let active = true;
-    Promise.all([commerceApi.cart(), buyerApi.profile()]).then(async ([data, profile]) => {
+    // Profile is optional address prefill; its failure must not hide a valid cart.
+    Promise.all([commerceApi.cart(), buyerApi.profile().catch(error => { if (active) report(error); return null; })]).then(async ([data, profile]) => {
       if (!active) return;
-      setAddress({ id: profile.id, receiverName: profile.fullName ?? profile.username, phone: profile.phone ?? '', line: profile.address ?? '', isDefault: true, verified: false });
+      if (profile) setAddress({ id: profile.id, receiverName: profile.fullName ?? profile.username, phone: profile.phone ?? '', line: profile.address ?? '', isDefault: true, verified: false });
       await refresh(data);
     }).catch(error => { if (active) { setLoadError(error instanceof Error ? error.message : 'Không thể tải giỏ hàng.'); report(error); } })
       .finally(() => { if (active) setLoading(false); });
@@ -128,6 +130,8 @@ export function useCart() {
     if (!ok) { notify.warning('Một số thay đổi số lượng chưa được đồng bộ. Hãy thử lại từng sản phẩm hoặc tải lại giỏ hàng trước khi đặt hàng.'); return false; }
     try {
       const latest = await commerceApi.cart();
+      const invalidCart = validateCheckoutCart(latest);
+      if (invalidCart) { notify.warning(invalidCart); return false; }
       const drift = hasCartFinancialDrift(cart, latest) || latest.items.length !== queue.size() || latest.items.some(line => queue.getSnapshot(line.id)?.confirmedQuantity !== line.quantity);
       if (drift) {
         await refresh(latest);

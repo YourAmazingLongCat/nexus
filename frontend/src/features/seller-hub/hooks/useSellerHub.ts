@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSession } from '../../auth/services/auth.api';
+import { getSession } from '../../../services/api/auth';
 import { notify } from '../../../shared/components/Toast';
-import { sellerApi, productImagesForUpdate, loadSellerInventory, loadSellerOrders, flatCategories, messageOf, loadSellerAuctions, mutateAuction, cancelAuction } from '../services/seller.api';
-import type { Category, Order } from '../services/seller.api';
-import { assertProductRetryMatches, productCreationFingerprint } from './productCreationRetry';
-import type { PendingProductCreation } from './productCreationRetry';
+import { sellerApi, productImagesForUpdate, loadSellerInventory, loadSellerOrders, flatCategories, messageOf, loadSellerAuctions, mutateAuction, cancelAuction } from '../../../services/api/seller';
+import type { Category, Order } from '../../../services/api/seller';
+import { assertProductRetryMatches, productCreationFingerprint } from '../../../shared/utils/productCreationRetry';
+import type { PendingProductCreation } from '../../../shared/utils/productCreationRetry';
 import type { ListingDraft, ProductStatus, SellerTabId, SellerProduct, SellerOrder, SellerAuction } from '../types/sellerHub';
 export function useSellerHub() {
  const navigate=useNavigate();const [auctions,setAuctions]=useState<SellerAuction[]>([]);
@@ -29,7 +29,7 @@ export function useSellerHub() {
  const visibleProducts=useMemo(()=>{const q=search.trim().toLocaleLowerCase('vi');const rows=products.filter(p=>(p.name+' '+p.sku).toLocaleLowerCase('vi').includes(q)&&(status==='all'||p.status===status as ProductStatus));if(sort!=='default')rows.sort((a,b)=>sort==='stock-desc'?b.stock-a.stock:a.stock-b.stock);return rows;},[products,search,status,sort]);
  useEffect(()=>{const c=new AbortController();const userId=getSession()?.userId;if(!userId)return;loadSellerAuctions(userId,c.signal).then(async rows=>{const mapped=await Promise.all(rows.map(async a=>{const p=await sellerApi.product(a.productId,c.signal);return{id:a.id,productId:a.productId,startTime:a.startTime,endTime:a.endTime,backendStatus:a.status,roomCode:a.id,product:p.name,sku:'—',image:p.primaryImageUrl??p.images[0]??'',currentBid:Number(a.currentPrice),startPrice:Number(a.startingPrice),bids:a.acceptedBidCount??0,watchers:'Chưa có API',endsIn:new Date(a.endTime).toLocaleString('vi-VN'),state:a.status==='ACTIVE'?'live' as const:a.status as SellerAuction['state'],topBidder:a.highestBidderId??'—'};}));setAuctions(mapped);}).catch(e=>{if(!c.signal.aborted)notify.warning(messageOf(e));});return()=>c.abort();},[]);
  const visibleAuctions=auctions.filter(a=>auctionFilter==='all'||a.state===auctionFilter);
- async function auctionAction(label:string,id?:string){if(mutationLock.current)return;const row=auctions.find(a=>a.id===id);if(label==='Sàn bid'&&id){navigate('/products/'+row?.productId+'?auctionId='+encodeURIComponent(id));return;}mutationLock.current=true;try{if(label==='Hủy phiên'&&id){if(!window.confirm('Hủy phiên đấu giá này?'))return;await cancelAuction(id);setAuctions(old=>old.map(a=>a.id===id?{...a,state:'CANCELLED',backendStatus:'CANCELLED'}:a));notify.success('Đã hủy phiên.');return;}
+ async function auctionAction(label:string,id?:string){if(!id&&label.includes('Tạo phiên')){navigate('/seller/auctions/new');return;}if(mutationLock.current)return;const row=auctions.find(a=>a.id===id);if(label==='Sàn bid'&&id){navigate('/products/'+row?.productId+'?auctionId='+encodeURIComponent(id));return;}mutationLock.current=true;try{if(label==='Hủy phiên'&&id){if(!window.confirm('Hủy phiên đấu giá này?'))return;await cancelAuction(id);setAuctions(old=>old.map(a=>a.id===id?{...a,state:'CANCELLED',backendStatus:'CANCELLED'}:a));notify.success('Đã hủy phiên.');return;}
  if(label==='Chỉnh sửa phiên'&&row?.backendStatus!=='SCHEDULED'){notify.info('Chỉ được sửa phiên SCHEDULED.');return;}
  const productId=row?.productId??window.prompt('ID sản phẩm của bạn:')?.trim();if(!productId)return;
  const price=window.prompt('Giá khởi điểm:',String(row?.startPrice??''));if(price===null)return;const start=window.prompt('Thời gian bắt đầu (ISO 8601):',row?.startTime??'');if(start===null)return;const end=window.prompt('Thời gian kết thúc (ISO 8601):',row?.endTime??'');if(end===null)return;

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getSession, logout, me } from '../../../features/auth/services/auth.api';
+import { getSession, logout, me } from '../../../services/api/auth';
 import type { LoginResponse } from '../../../features/auth/types/auth';
 import NexusLogo from '../Logo/NexusLogo';
 import { notify } from '../Toast';
@@ -19,7 +19,7 @@ function Header() {
   const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const [session, setSession] = useState<LoginResponse | null>(getSession);
+  const [session, setSession] = useState<LoginResponse | null>(() => getSession());
   async function handleLogout(event: ReactMouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
     setSession(null); setCart([]); setNotifications([]); setUnreadCount(0);
@@ -35,10 +35,11 @@ function Header() {
       const signal = controller.signal;
       const report = (error: unknown) => { if (!signal.aborted) notify.error(apiErrorMessage(error), { toastId: 'header-api-error' }); };
       const current = getSession(); setSession(current);
-      if (!current) { setCategories([]); setCart([]); setNotifications([]); setUnreadCount(0); return; }
+      // Catalog categories are public in the current Backend; private calls still require a session.
+      headerApi.categories(signal).then(rows => { if (!signal.aborted) setCategories(rows); }).catch(report);
+      if (!current) { setCart([]); setNotifications([]); setUnreadCount(0); return; }
       const accept = <T,>(callback: (value: T) => void) => (value: T) => { if (!signal.aborted && getSession()?.accessToken === current.accessToken) callback(value); };
       me(signal).then(accept(profile => setSession(latest => latest ? { ...latest, ...profile } : null))).catch(report);
-      headerApi.categories(signal).then(accept(setCategories)).catch(report);
       headerApi.notifications(signal).then(accept(page => setNotifications(page.content))).catch(report);
       headerApi.unreadCount(signal).then(accept(setUnreadCount)).catch(report);
       if (current.roles.includes('BUYER')) headerApi.cart(signal).then(accept(data => setCart(data.items))).catch(report);

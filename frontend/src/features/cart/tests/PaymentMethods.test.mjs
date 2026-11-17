@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 test('PaymentMethods preserves existing cart behavior', async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' });
   try {
-    const { paymentMethods } = await server.ssrLoadModule('/src/features/cart/mocks/cart.mock.ts');
+    const { paymentMethods } = await server.ssrLoadModule('/src/features/cart/tests/fixtures/cart.fixture.ts');
     const { default: PaymentMethods } = await server.ssrLoadModule('/src/features/cart/components/PaymentMethods.tsx');
     const paymentHtml = hasAuctionItems => renderToStaticMarkup(createElement(PaymentMethods, {
       methods: paymentMethods, value: 'vnpay', onChange: () => {}, hasAuctionItems,

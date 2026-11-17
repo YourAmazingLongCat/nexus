@@ -12,10 +12,32 @@ test('commerce services use exact authenticated Java controller contracts and pr
     const { commerceApi } = await server.ssrLoadModule('/src/services/api/commerce.ts');
     const { buyerApi } = await server.ssrLoadModule('/src/services/api/buyer.ts');
     auth.saveSession({ userId: 'buyer', email: 'buyer@example.test', fullName: 'Buyer', roles: ['BUYER'], accessToken: 'test-only', tokenType: 'Bearer', expiresAt: new Date(Date.now() + 60000).toISOString() }, false);
-    const calls = []; const result = { id: 'server-id', content: [], totalPages: 0 };
-    globalThis.fetch = async (url, options) => { calls.push({ url, options }); return Response.json(result); };
+    const calls = [];
+    const timestamp = '2026-01-01T00:00:00Z';
+    const cart = { id: 'cart', subtotal: 20000, itemCount: 2, items: [{ id: 'item', productId: 'product', skuId: null, sellerId: 'seller', quantity: 2, unitPrice: 10000, lineTotal: 20000 }] };
+    const summary = { id: 'order', orderNumber: 'ORD-001', sellerId: 'seller', orderType: 'DIRECT', status: 'PENDING', totalAmount: 20000, itemCount: 1, createdAt: timestamp };
+    const order = { ...summary, items: [{ id: 'order-item', productId: 'product', skuId: null, sellerId: 'seller', productNameSnapshot: 'Actual name', quantity: 2, unitPrice: 10000 }], shippingAddress: 'Actual address', receiverName: 'Actual buyer', receiverPhone: '+84901234567' };
+    const product = { id: 'product', sellerId: 'seller', name: 'Actual name', basePrice: 10000, categoryId: null, categoryName: null, status: 'ACTIVE', primaryImageUrl: null, createdAt: timestamp, description: null, images: [], updatedAt: timestamp };
+    const profile = { id: 'buyer', email: 'buyer@example.test', username: 'buyer', fullName: 'Buyer', phone: null, address: null, createdAt: timestamp };
+    const rating = { id: 'rating', orderId: 'order', sellerId: 'seller', buyerId: 'buyer', score: 5, comment: null, status: 'ACTIVE', createdAt: timestamp };
+    const shipments = [{ trackingNumber: 'TRACK-001', status: 'SHIPPING' }];
+    const responses = [
+      [{ ...cart, buyerId: 'buyer', status: 'ACTIVE', createdAt: timestamp, updatedAt: timestamp }, cart],
+      [{ ...cart, buyerId: 'buyer', status: 'ACTIVE', createdAt: timestamp, updatedAt: timestamp }, cart],
+      [{ ...cart, subtotal: 30000, itemCount: 3, items: [{ ...cart.items[0], quantity: 3, lineTotal: 30000 }], buyerId: 'buyer', status: 'ACTIVE', createdAt: timestamp, updatedAt: timestamp }, { ...cart, subtotal: 30000, itemCount: 3, items: [{ ...cart.items[0], quantity: 3, lineTotal: 30000 }] }],
+      [{ code: 'CODE', discountType: 'FIXED', orderAmount: 30000, discountAmount: 1000, finalAmount: 29000 }, { code: 'CODE', discountAmount: 1000 }],
+      ...['PENDING', 'PENDING', 'CANCELLED'].map(status => {
+        const expected = { ...order, status };
+        return [{ ...expected, buyerId: 'buyer', subtotal: 20000, discount: 0, shippingFee: 0, discountCode: null, updatedAt: timestamp, items: expected.items.map(item => ({ ...item, skuCodeSnapshot: null, subtotal: 20000 })) }, expected];
+      }),
+    ];
+    // Orders paging occurs between checkout and detail requests.
+    responses.splice(5, 0, [{ content: [summary], page: 2, size: 100, totalElements: 201, totalPages: 3, first: false, last: true }, { content: [summary], totalElements: 201, totalPages: 3 }]);
+    responses.push([rating, rating], [profile, profile], [product, product], [shipments, shipments]);
+    let responseIndex = 0;
+    globalThis.fetch = async (url, options) => { calls.push({ url, options }); return Response.json(responses[responseIndex][0]); };
     const expect = async (operation, path, method = 'GET', body) => {
-      assert.deepEqual(await operation(), result);
+      assert.deepEqual(await operation(), responses[responseIndex++][1]);
       const last = calls.at(-1);
       assert.equal(last.url, path);
       assert.equal(last.options.method ?? 'GET', method);

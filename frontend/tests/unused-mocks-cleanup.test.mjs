@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { existsSync, readFileSync } from 'node:fs';
 import { createElement } from 'react';
@@ -13,9 +13,9 @@ test('obsolete notice and unused order-success mock group are removed', () => {
   for (const path of ['roles/buyer/layouts/BuyerLayout.tsx','roles/seller/layouts/SellerLayout.tsx']) {
     assert.doesNotMatch(readFileSync(new URL('../src/' + path, import.meta.url), 'utf8'), /DemoNotice/);
   }
-  // These modules still supply live UI constants/defaults or have dedicated tests.
+  // Runtime mock groups have been replaced by constants and test-only fixtures.
   for (const path of ['buyer-hub/mocks/buyerHub.mock.ts','cart/mocks/cart.mock.ts','seller-hub/mocks/sellerHub.mock.ts','seller-inventory/mocks/inventory.mock.ts','seller-listing/mocks/createListing.mock.ts']) {
-    assert.equal(existsSync(new URL('../src/features/' + path, import.meta.url)), true, path);
+    assert.equal(existsSync(new URL('../src/features/' + path, import.meta.url)), false, path);
   }
 });
 

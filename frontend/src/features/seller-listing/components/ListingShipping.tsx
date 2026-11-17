@@ -1,19 +1,11 @@
-import { useState } from 'react';
-import { listingShippingMethods } from '../mocks/createListing.mock';
+import { useListingShipping } from '../hooks/useListingShipping';
+import { listingShippingMethods } from '../services/listingShipping.mock';
 import type { CreateListingState } from '../hooks/useCreateListing';
 
 // Bước 5 — Kho gửi hàng, kích thước đóng gói và phương thức vận chuyển.
 export default function ListingShipping({ hub }: { hub: CreateListingState }) {
   const { draft } = hub;
-  const [methods, setMethods] = useState<string[]>(
-    listingShippingMethods.filter(item => item.enabled).map(item => item.id),
-  );
-
-  function toggleMethod(id: string) {
-    setMethods(previous => (
-      previous.includes(id) ? previous.filter(value => value !== id) : [...previous, id]
-    ));
-  }
+  const {methods,toggleMethod}=useListingShipping();
 
   return (
     <div className="nx-listing-stack">

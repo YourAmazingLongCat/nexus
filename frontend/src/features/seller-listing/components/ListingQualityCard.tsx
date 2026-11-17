@@ -1,4 +1,4 @@
-import { listingQualityItems } from '../mocks/createListing.mock';
+import { listingQualityItems } from '../services/listingQuality.mock';
 
 // Aside 1 — Điểm chất lượng tin đăng.
 export default function ListingQualityCard({ score, label }: { score: number; label: string }) {

@@ -5,11 +5,16 @@ import SellerInventoryPage from '../../features/seller-inventory/pages/SellerInv
 import CreateListingPage from '../../features/seller-listing/pages/CreateListingPage';
 import OrderSuccessPage from '../../features/seller-order-success/pages/OrderSuccessPage';
 
+import CreateAuctionPage from '../../features/seller-auction/pages/CreateAuctionPage';
+import SellerAuctionResultPage from '../../features/seller-auction-result/pages/SellerAuctionResultPage';
+
 // UI-only route: authorization is outside this integration task.
 const sellerRoutes: RouteObject[] = [
   {
     element: <SellerLayout />,
     children: [
+      { path: '/seller/auctions/new', element: <CreateAuctionPage /> },
+      { path: '/seller/auctions/:auctionId/result', element: <SellerAuctionResultPage /> },
       { path: '/seller-hub', element: <SellerHubPage /> },
       { path: '/seller/products', element: <SellerInventoryPage /> },
       { path: '/seller/products/new', element: <CreateListingPage /> },
