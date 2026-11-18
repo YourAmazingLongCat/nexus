@@ -76,7 +76,7 @@ export function AdminUsersTable(model: ReturnType<typeof useAdminUsers>) {
                               {user.role}
                             </span>
                           ) : (
-                            <span style={{ color: '#94a3b8' }}>—</span>
+                            <span style={{ color: '#94a3b8' }}>N/A</span>
                           )}
                         </td>
                         <td>

@@ -14,7 +14,7 @@ export function useProductDetail(product: CatalogProductDetail, initialAuction: 
  const [reviewPage, setReviewPage] = useState(0); const [reviews, setReviews] = useState<PageResponse<Review> | null>(null); const [reviewError, setReviewError] = useState('');
  const [bidPage, setBidPage] = useState(0); const [bids, setBids] = useState<PageResponse<Bid> | null>(null); const [bidError, setBidError] = useState(''); const [refresh, setRefresh] = useState(0);
  const [clock, setClock] = useState(() => Date.now());
- const unsupported = (feature: string) => notify.error(feature + ' chưa được máy chủ hỗ trợ.');
+ const unsupported = (feature: string) => notify.error(feature + ' chưa được hỗ trợ.');
  const images = product.images.length ? product.images : product.primaryImageUrl ? [product.primaryImageUrl] : [];
  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
  useEffect(() => { const controller = new AbortController(); setReviewError(''); setReviews(null);

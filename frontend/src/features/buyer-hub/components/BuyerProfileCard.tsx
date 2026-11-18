@@ -58,12 +58,12 @@ export default function BuyerProfileCard({ profile, onCreateAuction }: BuyerProf
         <div className="nx-hub-wallet">
           <div className="nx-hub-wallet-cell">
             <p className="nx-hub-wallet-label">Số dư Ví Nexus</p>
-            <p className="nx-hub-wallet-value">{profile.walletBalance === null ? "Chưa hỗ trợ" : formatVnd(profile.walletBalance)}</p>
+            <p className="nx-hub-wallet-value">{profile.walletBalance === null ? "Ví chưa được hỗ trợ." : formatVnd(profile.walletBalance)}</p>
           </div>
           <span className="nx-hub-wallet-divider" aria-hidden="true"></span>
           <div className="nx-hub-wallet-cell">
             <p className="nx-hub-wallet-label">Voucher khả dụng</p>
-            <p className="nx-hub-wallet-voucher">{profile.voucherCount === null ? "Chưa hỗ trợ" : `${profile.voucherCount} mã giảm giá`}</p>
+            <p className="nx-hub-wallet-voucher">{profile.voucherCount === null ? "Thống kê mã giảm giá chưa được hỗ trợ." : `${profile.voucherCount} mã giảm giá`}</p>
           </div>
         </div>
 

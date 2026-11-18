@@ -93,7 +93,7 @@ export function useAdminDashboard() {
   };
 
   // This unavailable queue is deliberately read-only; never mutate VISIBLE rows as pending.
-  const handleApproveReview = async (_id: string) => { setError('Pending-review moderation is unavailable: backend only supports VISIBLE/HIDDEN reviews.'); };
+  const handleApproveReview = async (_id: string) => { setError('Kiểm duyệt đánh giá chờ duyệt chưa được hỗ trợ.'); };
   const handleRejectReview = handleApproveReview;
 
   return { navigate, stats, setStats, recentOrders, setRecentOrders, pendingReviews, setPendingReviews, error, setError, loading, setLoading, isUsingRealApi, setIsUsingRealApi, fetchDashboardData, formatCurrency, handleApproveReview, handleRejectReview };

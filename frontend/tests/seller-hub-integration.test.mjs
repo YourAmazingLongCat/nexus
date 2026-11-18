@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {createElement} from 'react';import {renderToStaticMarkup} from 'react-dom/server';import {MemoryRouter} from 'react-router-dom';import {createServer} from 'vite';
@@ -10,4 +11,10 @@ test('seller-hub-integration.test.mjs preserves seller shell without fabricated 
  assert.doesNotMatch(html,/Dell XPS 15 9530|NX-VN-88402|#ORD-2025-8839|128 sản phẩm/);
 
  }finally{await server.close();}
+});
+
+test('seller hub new-product button navigates to the full listing page', () => {
+ const source = readFileSync(new URL('../src/features/seller-hub/pages/SellerHubPage.tsx', import.meta.url), 'utf8');
+ assert.match(source, /onCreateProduct=\{\(\) => navigate\('\/seller\/products\/new'\)\}/);
+ assert.doesNotMatch(source, /onCreateProduct=\{hub\.focusListing\}/);
 });

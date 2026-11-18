@@ -42,7 +42,6 @@ function HomePage() {
                 aria-pressed={filter === item.id}
                 onClick={() => setFilter(item.id)}
               >
-                {item.id === 'auction' && <span className="nx-live-dot" />}
                 {item.label}
               </button>
             ))}

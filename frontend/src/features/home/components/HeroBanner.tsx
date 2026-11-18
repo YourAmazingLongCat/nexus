@@ -10,7 +10,7 @@ function HeroBanner() {
   const [copyError, setCopyError] = useState(false);
   const { products } = useHomeProducts();
   const featured = products[0];
-  function copyCoupon() { setCopied(false); setCopyError(true); notify.error('Chưa có API công bố ưu đãi này. Không thể xác nhận mã NEXUS10.'); }
+  function copyCoupon() { setCopied(false); setCopyError(true); notify.error('Xác nhận mã ưu đãi chưa được hỗ trợ.'); }
 
 
   return (

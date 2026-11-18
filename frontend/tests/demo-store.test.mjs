@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -45,7 +45,7 @@ test('live listing starts with empty commercial fields while preserved design fi
   const source = readSource('features/seller-listing/hooks/useCreateListing.ts');
   const input = source.slice(source.indexOf('const input='), source.indexOf('assertProductRetryMatches(pendingProduct'));
   assert.match(input, /name:draft.title.trim\(\)/); assert.match(input, /description:draft.description.trim\(\)/);
-  assert.match(input, /basePrice:draft.dealPrice/); assert.match(input, /categoryId:category/);
+  assert.match(input, /basePrice:draft.price/); assert.match(input, /categoryId:category/);
   assert.doesNotMatch(input, /accessories|shipping|condition|warranty|serviceFee|minOffer|listingWallet/);
   const cart = await server.ssrLoadModule('/src/features/cart/constants/cart.constants.ts');
   assert.deepEqual(cart.shippingMethods, []);

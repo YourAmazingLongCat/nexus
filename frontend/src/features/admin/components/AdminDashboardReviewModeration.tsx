@@ -20,7 +20,7 @@ export function AdminDashboardReviewModeration(model: ReturnType<typeof useAdmin
         {pendingReviews.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
             <i className="bi bi-check-circle" style={{ fontSize: '32px', color: '#10b981' }}></i>
-            <p style={{ marginTop: '8px', fontSize: '13px' }}>Chưa có API đánh giá chờ duyệt (chỉ hỗ trợ VISIBLE/HIDDEN).</p>
+            <p style={{ marginTop: '8px', fontSize: '13px' }}>Kiểm duyệt đánh giá chờ duyệt chưa được hỗ trợ.</p>
           </div>
         ) : (
           pendingReviews.map((rev) => (

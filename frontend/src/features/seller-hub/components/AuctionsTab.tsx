@@ -3,7 +3,7 @@ import type { SellerAuction } from '../types/sellerHub';
 import { auctionStates, formatSellerMoney } from '../constants/sellerHub.constants';
 import { sellerAuctionKpis as templates } from '../services/sellerAuctions.mock';
 
-const sellerAuctionKpis=templates.map(k=>({...k,value:'—',caption:'Chưa có API thống kê tổng hợp'}));
+const sellerAuctionKpis=templates.map(k=>({...k,value:'N/A',caption:'Thống kê tổng hợp chưa được hỗ trợ.'}));
 const stateLabels: Record<SellerAuction['state'], string> = { live: 'Đang diễn ra', closing: 'Sắp kết thúc', SCHEDULED:'Đã lên lịch',ENDED:'Đã kết thúc',CANCELLED:'Đã hủy',SETTLED:'Đã chốt' };
 
 function AuctionRow({ auction, hub }: { auction: SellerAuction; hub: SellerHubState }) {

@@ -70,7 +70,7 @@ export default function BuyerHubPage() {
     <main className="nx-hub-page">
       <div className="nx-container">
 
-        <p className="nx-hub-empty" role="status">{loading ? "Đang tải dữ liệu..." : loadError || "Đơn hàng và hồ sơ được tải từ máy chủ. Backend chưa hỗ trợ danh sách đấu giá cá nhân, lưu sau, ví và chỉ số người mua."}</p>
+        <p className="nx-hub-empty" role="status">{loading ? "Đang tải dữ liệu..." : loadError || "Đơn hàng và hồ sơ được tải từ hệ thống. Danh sách đấu giá cá nhân, lưu sau, ví và thống kê người mua chưa được hỗ trợ."}</p>
         <BuyerProfileCard profile={buyerProfile} onCreateAuction={handleOpenC2c} />
 
         <BuyerKpiGrid kpis={displayKpis} timerSeconds={winRemaining} />
@@ -116,7 +116,7 @@ export default function BuyerHubPage() {
             {activeTab === 'cart' && (
               <SavedCartTab
                 title="Sản phẩm đã lưu"
-                summary="Backend chưa hỗ trợ danh sách lưu sau."
+                summary="Danh sách sản phẩm lưu sau chưa được hỗ trợ."
                 selectAllLabel="Chọn tất cả để chuyển vào giỏ"
                 items={items}
                 selectedCount={selectedItemCount}

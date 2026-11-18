@@ -6,7 +6,7 @@ export default function ListingMedia({ hub }: { hub: CreateListingState }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div>
-      <p>Ảnh tải lên chỉ xem trước trong phiên này, không lưu vào bản nháp hay sản phẩm. Sản phẩm demo dùng ảnh mẫu.</p><input ref={inputRef} type="file" accept="image/*" multiple hidden aria-label="Chọn ảnh sản phẩm" onChange={event => { hub.addMedia(Array.from(event.target.files ?? [])); event.target.value = ""; }} /><div className="nx-listing-media-grid">
+      <p>Ảnh được lưu cùng sản phẩm khi đăng bán. Lưu ảnh vào bản nháp chưa được hỗ trợ.</p><input ref={inputRef} type="file" accept="image/*" multiple hidden aria-label="Chọn ảnh sản phẩm" onChange={event => { hub.addMedia(Array.from(event.target.files ?? [])); event.target.value = ""; }} /><div className="nx-listing-media-grid">
         {hub.media.map(slot => (
           <figure key={slot.id} className="nx-listing-media">
             <img src={slot.image} alt={slot.label} />

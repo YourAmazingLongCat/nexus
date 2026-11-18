@@ -12,7 +12,7 @@ export const buyerKpis: BuyerKpi[] = [
   {
     id: 'shipping',
     label: 'Đơn hàng đang giao',
-    value: '—',
+    value: 'N/A',
     unit: 'đơn',
     icon: 'bi-truck',
     iconTone: 'primary',
@@ -22,7 +22,7 @@ export const buyerKpis: BuyerKpi[] = [
   {
     id: 'active-bids',
     label: 'Đang theo đuổi (Active Bids)',
-    value: '—',
+    value: 'N/A',
     unit: 'phiên',
     icon: 'bi-stopwatch',
     iconTone: 'secondary',
@@ -32,7 +32,7 @@ export const buyerKpis: BuyerKpi[] = [
   {
     id: 'won-pending',
     label: 'Thắng chờ thanh toán',
-    value: '—',
+    value: 'N/A',
     unit: 'phiên',
     icon: 'bi-trophy-fill',
     iconTone: 'highlight',
@@ -42,7 +42,7 @@ export const buyerKpis: BuyerKpi[] = [
   {
     id: 'saved-cart',
     label: 'Sản phẩm yêu thích & Giỏ',
-    value: '—',
+    value: 'N/A',
     unit: 'mục',
     icon: 'bi-bookmark',
     iconTone: 'accent',
@@ -60,7 +60,7 @@ export const hubCopy = {
   auctionSearchPlaceholder: 'Tìm tên phiên...',
   ordersSummary: 'Đơn hàng từ hệ thống',
   savedCartTitle: 'Sản phẩm Đã lưu & Giỏ hàng cá nhân',
-  savedCartSummary: 'Backend chưa hỗ trợ lưu sau',
+  savedCartSummary: 'Lưu sản phẩm để mua sau chưa được hỗ trợ.',
   savedCartSelectAll: 'Chọn tất cả để thanh toán',
   c2cTitle: 'Phiên đấu giá do bạn tự mở (C2C Personal Auctions)',
   c2cSubtitle:
@@ -73,7 +73,7 @@ export const hubCopy = {
   guaranteeLink: 'Đọc điều khoản bảo vệ người mua',
   supportTitle: 'Cần trợ giúp giải quyết tranh chấp?',
   supportBody:
-    'Các kênh hỗ trợ chưa được tích hợp.',
+    'Khiếu nại và chat hỗ trợ chưa được hỗ trợ.',
 };
 
 export const hubTabs: HubTab[] = [

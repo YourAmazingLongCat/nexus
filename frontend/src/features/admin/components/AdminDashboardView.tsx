@@ -11,7 +11,7 @@ export function AdminDashboardView(model: ReturnType<typeof useAdminDashboard>) 
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
       <AdminDashboardHeader {...model} />
 
-      <p className="nx-page-subtitle">MOCK: doanh thu, xu hướng tăng trưởng và số phiên sắp kết thúc là dữ liệu minh họa; backend chưa có API tổng hợp. Danh sách đơn hàng và tổng số dùng REST API; khối chờ duyệt chưa có API hỗ trợ.</p>
+      <p className="nx-page-subtitle">MOCK: doanh thu, xu hướng tăng trưởng và số phiên sắp kết thúc là dữ liệu minh họa; backend chưa có API tổng hợp. Danh sách đơn hàng và tổng số dùng REST API; Kiểm duyệt đánh giá chờ duyệt chưa được hỗ trợ.</p>
       {/* KPI Cards Grid */}
       <AdminDashboardStats {...model} />
 

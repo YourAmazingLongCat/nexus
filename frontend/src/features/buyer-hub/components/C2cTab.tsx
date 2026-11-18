@@ -52,7 +52,7 @@ export default function C2cTab({
         activeLabel={activeLabel}
         onViewBidders={onViewBidders}
         onEndEarly={onEndEarly}
-      /> : <p className="nx-hub-empty">Backend chưa hỗ trợ phiên C2C dành cho người mua.</p>}
+      /> : <p className="nx-hub-empty">Đấu giá C2C dành cho người mua chưa được hỗ trợ.</p>}
 
       <C2cAuctionForm
         title={formTitle}

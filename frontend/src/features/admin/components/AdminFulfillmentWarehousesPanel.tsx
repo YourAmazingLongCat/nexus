@@ -44,7 +44,7 @@ export function AdminFulfillmentWarehousesPanel(model: ReturnType<typeof useAdmi
                             <code style={{ color: '#315bf4' }}>{wh.code}</code>
                           </td>
                           <td>
-                            <div>{wh.address || '—'}</div>
+                            <div>{wh.address || 'N/A'}</div>
                           </td>
                           <td>
                             <span
@@ -56,7 +56,7 @@ export function AdminFulfillmentWarehousesPanel(model: ReturnType<typeof useAdmi
                             </span>
                           </td>
                           <td>
-                            {wh.createdAt ? new Date(wh.createdAt).toLocaleDateString('vi-VN') : '—'}
+                            {wh.createdAt ? new Date(wh.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'inline-flex', gap: '6px' }}>

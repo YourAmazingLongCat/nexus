@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -24,11 +24,11 @@ test('seller tabs render auctions, orders, reports and honest unavailable states
     assert.match(orderHtml([]), /Không có đơn hàng ở trạng thái này/);
     const { default: ReportsTab } = await server.ssrLoadModule('/src/features/seller-hub/components/ReportsTab.tsx');
     const reports = renderToStaticMarkup(createElement(ReportsTab, { hub: { reportRange: '6m', setReportRange: noop, mockAction: noop } }));
-    assert.match(reports, /Chưa có API/);
+    assert.match(reports, /chưa được hỗ trợ\./);
     assert.match(reports, /Điểm đánh giá shop/);
     assert.match(reports, /Điểm đánh giá shop/);
     assert.equal((reports.match(/class="nx-seller-chart-col"/g) || []).length, 6);
     assert.match(reports,/height:0%/);
-    assert.match(reports,/Chưa có API báo cáo sản phẩm bán chạy/);
+    assert.match(reports,/Báo cáo sản phẩm bán chạy chưa được hỗ trợ\./);
   } finally { await server.close(); }
 });

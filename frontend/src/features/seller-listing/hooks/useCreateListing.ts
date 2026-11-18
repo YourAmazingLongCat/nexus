@@ -24,7 +24,7 @@ export function useCreateListing() {
   const mediaRef = useRef<ListingMediaSlot[]>([]);
   const uploadedImages = useRef(new Map<string, string>());
   useEffect(() => () => { urls.current.forEach(url => URL.revokeObjectURL(url)); }, []);
-  const mockAction = (label:string) => notify.info(label+' — backend chưa có API hỗ trợ.');
+  const mockAction = (label:string) => notify.info(label+' chưa được hỗ trợ.');
   function updateDraft<K extends keyof ListingDraftForm>(key: K, value: ListingDraftForm[K]) { setSaved(false); setDraft(previous => ({ ...previous, [key]: value })); }
   function toggleSaleMode(id: string) { setSaved(false); setSaleModes(previous => previous.includes(id) ? previous.filter(value => value !== id) : [...previous, id]); }
   function changeQuantity(delta: number) { updateDraft('quantity', Math.min(99, Math.max(1, draft.quantity + delta))); }
@@ -51,7 +51,7 @@ export function useCreateListing() {
     mediaRef.current = mediaRef.current.filter(value => value.id !== id).map((slot, index) => ({ ...slot, cover: index === 0 }));
     setMedia(mediaRef.current); setSaved(false);
   }
-  function saveDraft(){notify.info('Backend chưa có API lưu bản nháp. Không có dữ liệu được lưu.');}
+  function saveDraft(){notify.info('Lưu bản nháp chưa được hỗ trợ.');}
   async function submitListing(){
     if(mutationLock.current)return;
     const next=validateListing(draft,category,saleModes);
@@ -61,7 +61,7 @@ export function useCreateListing() {
     setErrors(next);if(next.length){notify.warning(next[0]);return;}
     mutationLock.current=true;setSubmitting(true);
     try{
-      const input={name:draft.title.trim(),description:draft.description.trim(),basePrice:draft.dealPrice,categoryId:category,images:[]};
+      const input={name:draft.title.trim(),description:draft.description.trim(),basePrice:draft.price,categoryId:category,images:[]};
       assertProductRetryMatches(pendingProduct.current,input);
       const id=pendingProduct.current?.id ?? (await sellerApi.createProduct(input)).id;
       pendingProduct.current={id,fingerprint:productCreationFingerprint(input)};
@@ -75,8 +75,8 @@ export function useCreateListing() {
   }
   const titleLength = draft.title.length;
   const discountPercent = draft.price > 0 ? Math.round(((draft.price - draft.dealPrice) / draft.price) * 100) : 0;
-  const serviceFee = Math.round(draft.dealPrice * 0.03);
-  const netEarnings = draft.dealPrice - serviceFee;
+  const serviceFee = Math.round(draft.price * 0.03);
+  const netEarnings = draft.price - serviceFee;
   const formatted = useMemo(() => ({ dealPrice: formatVnd(draft.dealPrice), price: formatVnd(draft.price), minOffer: formatVnd(draft.minOffer), serviceFee: formatVnd(serviceFee), netEarnings: formatVnd(netEarnings) }), [draft.dealPrice, draft.price, draft.minOffer, serviceFee, netEarnings]);
   return { categories, submitting, draft, updateDraft, category, setCategory, condition, setCondition, saleModes, toggleSaleMode, shippingPayer, setShippingPayer, accessories, removeAccessory, changeQuantity, titleLength, titleMax: TITLE_MAX, titleOverLimit: titleLength > TITLE_MAX, discountPercent, formatted, submitListing, mockAction, saveDraft, saved, errors, media, addMedia, removeMedia };
 }

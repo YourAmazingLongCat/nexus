@@ -1,4 +1,4 @@
-﻿import type { CreateAuctionState } from '../hooks/useCreateAuction';
+import type { CreateAuctionState } from '../hooks/useCreateAuction';
 import AuctionSection from './AuctionSection';
 
 export default function AuctionScheduleSection({ hub }: { hub: CreateAuctionState }) {
@@ -15,7 +15,7 @@ export default function AuctionScheduleSection({ hub }: { hub: CreateAuctionStat
       </div>
     </fieldset>
     <div className="sca-end-time"><i className="bi bi-clock" aria-hidden="true" /><span>Kết thúc dự kiến: <strong>{hub.endDate}</strong></span></div>
-    <div className="sca-soft-close"><div className="sca-toggle-row"><div><strong>Tự động gia hạn (Anti-sniping)</strong><p>Chưa khả dụng: API tạo phiên chưa hỗ trợ tự động gia hạn khi có lượt đấu giá cuối phiên.</p></div><button type="button" className="sca-toggle" role="switch" aria-checked={false} aria-label="Tự động gia hạn: chưa hỗ trợ" disabled><span /></button></div></div>
+    <div className="sca-soft-close"><div className="sca-toggle-row"><div><strong>Tự động gia hạn (Anti-sniping)</strong><p>Tự động gia hạn phiên đấu giá chưa được hỗ trợ.</p></div><button type="button" className="sca-toggle" role="switch" aria-checked={false} aria-label="Tự động gia hạn chưa được hỗ trợ." disabled><span /></button></div></div>
     <p className="sca-muted">Thời gian theo múi giờ thiết bị, gửi theo UTC. Trạng thái phiên do máy chủ quyết định.</p>
   </AuctionSection>;
 }

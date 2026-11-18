@@ -27,7 +27,7 @@ export function useAuctionResult(auctionId: string, outcome: Outcome) {
     const timer = window.setInterval(() => setSeconds(value => Math.max(0, value - 1)), 1000);
     return () => window.clearInterval(timer);
   }, [result, outcome]);
-  const mockAction = (label: string) => setNotice(`${label}: chưa được hỗ trợ bởi API hiện tại. Không có giao dịch được thực hiện.`);
+  const mockAction = (label: string) => setNotice(`${label} chưa được hỗ trợ. Không có giao dịch được thực hiện.`);
   return { result, loading, error, seconds, notice, subscribed, setSubscribed, mockAction,
     dismissNotice: () => setNotice(''), retry: () => setRevision(value => value + 1) };
 }

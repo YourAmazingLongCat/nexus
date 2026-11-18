@@ -21,9 +21,9 @@ export default function ReportsTab({ hub }: { hub: SellerHubState }) {
     <div className="nx-seller-report-grid">
       <section className="nx-seller-report-card" aria-labelledby="revenue-title">
         <div className="nx-seller-report-head"><div><h3 id="revenue-title">Doanh thu theo tháng</h3><p>Đơn vị: đồng (VND)</p></div><button className="nx-seller-text-button" onClick={() => hub.mockAction('Xuất báo cáo doanh thu')}><i className="bi bi-download" aria-hidden="true" /> Xuất báo cáo</button></div>
-        <div className="nx-seller-chart" role="img" aria-label="Chưa có API báo cáo doanh thu — các cột chỉ là khung trống">{sellerRevenueSeries.map(point =>
+        <div className="nx-seller-chart" role="img" aria-label="Báo cáo doanh thu chưa được hỗ trợ.">{sellerRevenueSeries.map(point =>
           <div className="nx-seller-chart-col" key={point.label}>
-            <span className="nx-seller-chart-value">—</span>
+            <span className="nx-seller-chart-value">N/A</span>
             <div className="nx-seller-chart-track"><span style={{ height: '0%' }} className={point.label === 'T3' ? 'is-current' : ''} /></div>
             <span className="nx-seller-chart-label">{point.label}</span>
             <small className={point.growth.startsWith('-') ? 'nx-seller-red-text' : 'nx-seller-blue-text'}>{point.growth}</small>
@@ -32,7 +32,7 @@ export default function ReportsTab({ hub }: { hub: SellerHubState }) {
       <section className="nx-seller-report-card" aria-labelledby="rating-title">
         <div className="nx-seller-report-head"><div><h3 id="rating-title">Điểm đánh giá shop</h3><p>Chỉ tính đánh giá đã xác thực đơn hàng</p></div></div>
         <div className="nx-seller-rating-summary"><div className="nx-seller-rating-score"><strong>{shopRating.score}</strong><Stars value={0} /><small>{shopRating.total}</small></div>
-          <ul className="nx-seller-rating-bars">{shopRating.stars.map(row => <li key={row.star}><span>{row.star} <i className="bi bi-star-fill" aria-hidden="true" /></span><div className="nx-seller-meter"><span style={{ width: `${row.percent}%` }} /></div><small>—</small></li>)}</ul></div>
+          <ul className="nx-seller-rating-bars">{shopRating.stars.map(row => <li key={row.star}><span>{row.star} <i className="bi bi-star-fill" aria-hidden="true" /></span><div className="nx-seller-meter"><span style={{ width: `${row.percent}%` }} /></div><small>N/A</small></li>)}</ul></div>
         <div className="nx-seller-rating-foot"><strong className="nx-seller-blue-text">{sellerReviewKpis.replyRate}</strong><span>{sellerReviewKpis.replyNote}</span><span className="nx-seller-red-text">{sellerReviewKpis.responseNote}</span></div>
       </section>
     </div>
@@ -43,7 +43,7 @@ export default function ReportsTab({ hub }: { hub: SellerHubState }) {
         <td>{sku.sold}</td>
         <td><strong className="nx-seller-price">{formatSellerMoney(sku.revenue)}</strong></td>
         <td><span className={`nx-seller-trend nx-seller-trend--${sku.tone}`}><i className={`bi bi-arrow-${sku.tone === 'down' ? 'down' : 'up'}-right`} aria-hidden="true" /> {sku.trend}</span></td>
-      </tr>)}{!sellerTopSkus.length&&<tr><td colSpan={4} className="nx-seller-empty">Chưa có API báo cáo sản phẩm bán chạy.</td></tr>}</tbody></table></div>
+      </tr>)}{!sellerTopSkus.length&&<tr><td colSpan={4} className="nx-seller-empty">Báo cáo sản phẩm bán chạy chưa được hỗ trợ.</td></tr>}</tbody></table></div>
     </section>
     <section className="nx-seller-report-card" aria-labelledby="reviews-title">
       <div className="nx-seller-report-head"><div><h3 id="reviews-title">Đánh giá gần đây của khách hàng</h3><p>{sellerReviews.filter(review => !review.replied).length} đánh giá chưa phản hồi</p></div><button className="nx-seller-text-button" onClick={() => hub.mockAction('Xem tất cả đánh giá')}>Xem tất cả</button></div>
@@ -52,7 +52,7 @@ export default function ReportsTab({ hub }: { hub: SellerHubState }) {
         <p className="nx-seller-review-product"><i className="bi bi-bag" aria-hidden="true" /> {review.product}</p>
         <p>{review.text}</p>
         <div className="nx-seller-review-foot">{review.replied ? <span className="nx-seller-state nx-seller-state--live">Đã phản hồi</span> : <button className="nx-seller-text-button" onClick={() => hub.mockAction(`Phản hồi đánh giá của ${review.buyer}`)}>Phản hồi ngay</button>}</div>
-      </li>)}{!sellerReviews.length&&<li className="nx-seller-empty">Chưa có API đánh giá người bán.</li>}</ul>
+      </li>)}{!sellerReviews.length&&<li className="nx-seller-empty">Đánh giá người bán chưa được hỗ trợ.</li>}</ul>
     </section>
   </section>;
 }

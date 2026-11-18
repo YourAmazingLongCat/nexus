@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { type Listing } from '../../../services/api/catalog';
 import { getSession } from '../../../services/api/auth';
@@ -86,7 +86,7 @@ export function useProductListing() {
   }, [categoryId, mode, query, budget, sort, page, retry, sessionKey]);
   const start = (page - 1) * PAGE_SIZE;
   const pageProducts = products;
-  const selectSort = (value: string) => { if (value === 'rating') { notify.error('API chưa hỗ trợ sắp xếp theo đánh giá.'); return; } setSort(value); };
+  const selectSort = (value: string) => { if (value === 'rating') { notify.error('Sắp xếp theo đánh giá chưa được hỗ trợ.'); return; } setSort(value); };
 
   const activeFilters = [
     ...(query ? [{ label: `Tìm: ${query}`, clear: () => setQuery('') }] : []),

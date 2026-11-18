@@ -1,4 +1,4 @@
-﻿import { api, ApiError, type PageResponse } from './client';
+import { api, ApiError, type PageResponse } from './client';
 export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 export interface CatalogProduct {
   id: string; name: string; basePrice: number; status: ProductStatus;
@@ -117,7 +117,7 @@ export function adaptApiPage<T>(value: unknown, adapt: (item: unknown) => T): Pa
 export async function listAuctionSummaries(query: URLSearchParams, signal?: AbortSignal): Promise<PageResponse<Auction>> {
  const keyword = query.get('keyword')?.trim();
  if (keyword && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(keyword)) {
-   throw new ApiError(400, 'Tìm kiếm đấu giá chỉ hỗ trợ UUID sản phẩm hoặc người bán; chưa hỗ trợ tìm theo tên.');
+   throw new ApiError(400, 'Tìm kiếm đấu giá theo tên chưa được hỗ trợ. Vui lòng nhập UUID sản phẩm hoặc người bán.');
  }
  return adaptApiPage(await api('/api/v1/auction/auctions?' + query, { signal }), adaptAuction);
 }

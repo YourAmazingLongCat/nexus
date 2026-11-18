@@ -26,7 +26,7 @@ export function ProductDetail({ product, initialAuction = null }: { product: Cat
    <ProductPurchase product={product} detail={detail} /><ProductAssurance /></div>
 
    <div className="nx-detail-bottom"><div><section className="nx-panel nx-description"><h2>Mô tả sản phẩm</h2><RichTextContent className="nx-description-content" value={product.description} fallback="Chưa có mô tả." /><div className="nx-description-highlights"><div><h3>Danh mục</h3><p>{product.categoryName || 'Chưa có dữ liệu'}</p></div><div><h3>Phụ kiện và bảo hành</h3><p>Chưa có dữ liệu từ máy chủ.</p></div></div></section>
-    <section className="nx-panel nx-specs"><h2>Thông tin sản phẩm</h2><table><tbody>{[['Danh mục', product.categoryName || '—'], ['Trạng thái', product.status], ['Ngày tạo', new Date(product.createdAt).toLocaleString('vi-VN')], ['Cập nhật', new Date(product.updatedAt).toLocaleString('vi-VN')]].map(([key,value]) => <tr key={key}><th>{key}</th><td>{value}</td></tr>)}</tbody></table></section></div>
+    <section className="nx-panel nx-specs"><h2>Thông tin sản phẩm</h2><table><tbody>{[['Danh mục', product.categoryName || 'N/A'], ['Trạng thái', product.status], ['Ngày tạo', new Date(product.createdAt).toLocaleString('vi-VN')], ['Cập nhật', new Date(product.updatedAt).toLocaleString('vi-VN')]].map(([key,value]) => <tr key={key}><th>{key}</th><td>{value}</td></tr>)}</tbody></table></section></div>
     <ProductReviews detail={detail} /></div>
  </main>;
 }

@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createServer } from 'vite';
 import { readFile, readdir } from 'node:fs/promises';
@@ -57,6 +57,6 @@ test('create flow has loading, empty, error, duplicate-submit protection and rea
  const productSection = await readFile(new URL('components/AuctionProductSection.tsx', base), 'utf8');
  assert.match(productSection, /hub.loading/); assert.match(productSection, /hub.loadError/); assert.match(productSection, /!products.length/);
  const sidebar = await readFile(new URL('components/AuctionSidebar.tsx', base), 'utf8');
- assert.match(sidebar, /disabled title="API chưa hỗ trợ lưu bản nháp"/);
+ assert.match(sidebar, /disabled title="Lưu bản nháp chưa được hỗ trợ."/);
 });
 

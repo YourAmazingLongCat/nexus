@@ -161,7 +161,7 @@ export default function OrderSummary({
           <div className="nx-cart-trust-item">
             <i className="bi bi-patch-check-fill" aria-hidden="true"></i>
             <p>
-              <strong>Lưu ý:</strong> Chính sách bảo hành và hoàn tiền chưa được cung cấp bởi API.
+              <strong>Lưu ý:</strong> Tra cứu chính sách bảo hành và hoàn tiền chưa được hỗ trợ.
             </p>
           </div>
           <div className="nx-cart-trust-item">

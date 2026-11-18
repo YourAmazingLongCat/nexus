@@ -28,7 +28,7 @@ export function AdminCatalogTable(model: ReturnType<typeof useAdminCatalog>) {
                               ID: <code>{cat.id.slice(0, 8)}...</code>
                             </div>
                           </td>
-                          <td>{cat.description || '—'}</td>
+                          <td>{cat.description || 'N/A'}</td>
                           <td>
                             <span
                               className={`nx-badge ${

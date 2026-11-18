@@ -30,7 +30,7 @@ export default function ListingBasicInfo({ hub }: { hub: CreateListingState }) {
           </span>
         </div>
         <div className="nx-listing-hint-row">
-          <span className="nx-listing-chip nx-listing-chip--seo">SEO: chưa có API chấm điểm</span>
+          <span className="nx-listing-chip nx-listing-chip--seo">Chấm điểm SEO chưa được hỗ trợ.</span>
           <span className="nx-listing-hint">
             Bao gồm: Tên máy + Tình trạng + Xuất xứ + Phụ kiện
           </span>

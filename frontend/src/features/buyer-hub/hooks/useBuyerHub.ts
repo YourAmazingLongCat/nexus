@@ -7,7 +7,7 @@ import { buyerApi, type BuyerProfileResponse } from '../../../services/api/buyer
 import type { AuctionFilterId, BidStatus, BuyerBid, BuyerHubTabId, BuyerOrder, BuyerProfile, C2cDraft, OrderFilterId, SavedItem } from '../types/buyerHub';
 const initialDraft: C2cDraft = { name: '', category: '', duration: '', startPrice: '', stepPrice: '', escrow: false };
 // TODO backend: personal auction list, saved items, C2C, wallet and support APIs are not exposed.
-const unavailable = () => notify.info('Backend chưa cung cấp chức năng này. Không có thay đổi nào được thực hiện.');
+const unavailable = (feature: string) => () => notify.info(feature + ' chưa được hỗ trợ.');
 const report = (error: unknown) => notify.error(apiErrorMessage(error));
 
 export function useBuyerHub() {
@@ -41,9 +41,9 @@ export function useBuyerHub() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  const buyerProfile: BuyerProfile = { name: profile?.fullName ?? profile?.username ?? '—', initial: (profile?.fullName ?? profile?.username ?? '?').slice(0, 1),
-    verified: false, memberTier: '—', memberId: profile?.id ?? '—', rating: '—', reviewCount: null, winPaymentRate: '—',
-    joinedAt: profile ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : '—', walletBalance: null, voucherCount: null };
+  const buyerProfile: BuyerProfile = { name: profile?.fullName ?? profile?.username ?? 'N/A', initial: (profile?.fullName ?? profile?.username ?? '?').slice(0, 1),
+    verified: false, memberTier: 'N/A', memberId: profile?.id ?? 'N/A', rating: 'N/A', reviewCount: null, winPaymentRate: 'N/A',
+    joinedAt: profile ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : 'N/A', walletBalance: null, voucherCount: null };
   const bids: BuyerBid[] = [];
   const items: SavedItem[] = [];
   const visibleOrders = useMemo<BuyerOrder[]>(() => orders.filter(order => orderFilter === 'all' || order.status.toLowerCase() === orderFilter)
@@ -100,14 +100,14 @@ export function useBuyerHub() {
   return {
     loading, loadError, buyerProfile, orderCounts: Object.fromEntries(["all", "shipping", "completed", "cancelled"].map(status => [status, status === "all" ? orders.length : orders.filter(order => order.status.toLowerCase() === status).length])), orderCount: orders.length, savedCount: 0, activeTab, setActiveTab, auctionFilter, orderFilter,
     auctionSearch, setAuctionSearch, bids, visibleBids: bids, visibleOrders, winRemaining: 0, items, selectedItemCount: 0, savedSubtotal: 0, c2cDraft,
-    handleOpenC2c, handleBidAction: (_bid: BuyerBid) => unavailable(), handleBidHistory: (_label: string) => unavailable(),
+    handleOpenC2c, handleBidAction: (_bid: BuyerBid) => unavailable('Đấu giá cá nhân')(), handleBidHistory: (_label: string) => unavailable('Xem lịch sử đấu giá cá nhân')(),
     handleSelectAuctionFilter: setAuctionFilter, handleSelectOrderFilter: setOrderFilter,
-    handlePayment: unavailable, handleWinDetail: unavailable, handleTrackShipment, handleCancelOrder, handleReviewOrder, handleRebuy,
-    handleToggleItem: (_id: string) => unavailable(), handleSelectAllItems: unavailable, handleQuantityChange: (_id: string, _quantity: number) => unavailable(),
-    handleRemoveItem: (_id: string) => unavailable(), handleMoveToCart: (_id: string) => unavailable(), handleCheckoutSelected: unavailable,
-    handleC2cViewBidders: (_count: number) => unavailable(), handleC2cEndEarly: unavailable, handleC2cDraftChange,
-    handleC2cReset: () => setC2cDraft(initialDraft), handleC2cSubmit: unavailable, handleLiveFeedAction: unavailable,
-    handleGuaranteeLink: unavailable, handleComplaint: unavailable, handleSupportChat: unavailable,
+    handlePayment: unavailable('Thanh toán đấu giá'), handleWinDetail: unavailable('Xem chi tiết phiên thắng'), handleTrackShipment, handleCancelOrder, handleReviewOrder, handleRebuy,
+    handleToggleItem: (_id: string) => unavailable('Chọn sản phẩm lưu sau')(), handleSelectAllItems: unavailable('Chọn tất cả sản phẩm lưu sau'), handleQuantityChange: (_id: string, _quantity: number) => unavailable('Đổi số lượng sản phẩm lưu sau')(),
+    handleRemoveItem: (_id: string) => unavailable('Xóa sản phẩm lưu sau')(), handleMoveToCart: (_id: string) => unavailable('Chuyển sản phẩm lưu sau vào giỏ')(), handleCheckoutSelected: unavailable('Thanh toán sản phẩm lưu sau'),
+    handleC2cViewBidders: (_count: number) => unavailable('Xem người tham gia đấu giá C2C')(), handleC2cEndEarly: unavailable('Kết thúc sớm phiên C2C'), handleC2cDraftChange,
+    handleC2cReset: () => setC2cDraft(initialDraft), handleC2cSubmit: unavailable('Tạo phiên đấu giá C2C'), handleLiveFeedAction: unavailable('Bảng tin trực tiếp'),
+    handleGuaranteeLink: unavailable('Bảo chứng giao dịch'), handleComplaint: unavailable('Gửi khiếu nại'), handleSupportChat: unavailable('Chat hỗ trợ'),
   };
 }
 export type UseBuyerHub = ReturnType<typeof useBuyerHub>;

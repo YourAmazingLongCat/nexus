@@ -20,10 +20,10 @@ export default function AuctionWinAlert({ notice, onViewDetail, onPay }: Auction
             <h2 id="hub-win-title" className="nx-hub-win-title">
               {notice ? `Chúc mừng! Bạn đã thắng phiên đấu giá ${notice.code}` : 'Thông tin phiên đấu giá đã thắng'}
             </h2>
-            <span className="nx-hub-win-tag">{notice ? "Cần thanh toán" : "Chưa hỗ trợ"}</span>
+            <span className="nx-hub-win-tag">{notice ? "Cần thanh toán" : "Thông báo phiên thắng chưa được hỗ trợ."}</span>
           </div>
           <p className="nx-hub-win-desc">
-            {notice ? <>Sản phẩm: <strong>{notice.productName}</strong> với giá chốt <strong>{formatVnd(notice.finalPrice)}</strong>. Vui lòng thanh toán trong 24h để người bán bàn giao hàng vận chuyển.</> : "Backend chưa cung cấp danh sách phiên thắng và hạn thanh toán cá nhân. Không có thông tin thanh toán nào được suy đoán."}
+            {notice ? <>Sản phẩm: <strong>{notice.productName}</strong> với giá chốt <strong>{formatVnd(notice.finalPrice)}</strong>. Vui lòng thanh toán trong 24h để người bán bàn giao hàng vận chuyển.</> : "Xem danh sách phiên thắng và hạn thanh toán cá nhân chưa được hỗ trợ."}
           </p>
         </div>
       </div>
@@ -33,7 +33,7 @@ export default function AuctionWinAlert({ notice, onViewDetail, onPay }: Auction
           Chi tiết phiên
         </button>
         <button type="button" className="nx-hub-btn nx-hub-btn--pay" onClick={onPay} disabled={!notice}>
-          {notice?.payLabel ?? "Thanh toán chưa khả dụng"}
+          {notice?.payLabel ?? "Thanh toán chưa được hỗ trợ."}
         </button>
       </div>
     </section>

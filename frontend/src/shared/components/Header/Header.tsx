@@ -161,7 +161,7 @@ function Header() {
 
             <span className="top-bar-divider">|</span>
 
-            <a onClick={(event) => { event.preventDefault(); notify.info('Máy chủ chưa cung cấp danh sách ưu đãi.'); }} href="#deals" className="top-link">
+            <a onClick={(event) => { event.preventDefault(); notify.info('Xem danh sách ưu đãi chưa được hỗ trợ.'); }} href="#deals" className="top-link">
               Deals hot
             </a>
 
@@ -170,7 +170,7 @@ function Header() {
               Đấu giá trực tiếp
             </a>
 
-            <a onClick={(event) => { event.preventDefault(); notify.info('Chưa có dịch vụ hỗ trợ trực tuyến.'); }} href="#help" className="top-link top-link-hide-mobile">
+            <a onClick={(event) => { event.preventDefault(); notify.info('Hỗ trợ trực tuyến chưa được hỗ trợ.'); }} href="#help" className="top-link top-link-hide-mobile">
               Trợ giúp & Hỗ trợ
             </a>
           </div>

@@ -21,7 +21,7 @@ export default function CreateListingPage() {
     <main className="nx-listing-page">
       <span className="nx-listing-glow is-top" aria-hidden="true" />
       <span className="nx-listing-glow is-left" aria-hidden="true" />
-      <div className="nx-container"><p role="note">Chỉ lưu tên, mô tả, danh mục, giá mua ngay, SKU và tồn kho. Upload ảnh, tình trạng, thương hiệu, vận chuyển, bảo hành và cấu hình trả giá chưa có API lưu.</p>
+      <div className="nx-container"><p role="note">Lưu thông tin tình trạng, thương hiệu, vận chuyển, bảo hành và cấu hình trả giá chưa được hỗ trợ.</p>
         <ListingHeader hub={hub} />
         {hub.errors.length > 0 && <div role="alert" className="nx-listing-guide"><ul>{hub.errors.map(error => <li key={error}>{error}</li>)}</ul></div>}
         <div className="nx-listing-layout">
@@ -59,8 +59,8 @@ export default function CreateListingPage() {
 
             <ListingSection
               step={4}
-              title="Phương thức bán & Định giá niêm yết"
-              caption="Linh hoạt kết hợp bán giá cố định, nhận trả giá hoặc chuyển đấu giá"
+              title="Giá bán & Số lượng tồn kho"
+              caption="Nhập giá bán cố định để lưu sản phẩm và SKU"
             >
               <ListingPricing hub={hub} />
             </ListingSection>
@@ -77,7 +77,7 @@ export default function CreateListingPage() {
           </div>
 
           <aside className="nx-listing-aside">
-            <ListingQualityCard score={0} label="Chưa có API đánh giá" />
+            <ListingQualityCard score={0} label="Đánh giá chưa được hỗ trợ." />
             <ListingPreviewCard hub={hub} />
             <ListingEarningsCard hub={hub} />
             <ListingAuctionCard hub={hub} />
